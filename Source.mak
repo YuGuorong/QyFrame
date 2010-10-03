@@ -3,7 +3,10 @@
 DIR_SRC   = ./src
 DIR_SRC  := $(strip $(DIR_SRC))
 
-SRC_LIST = $(DIR_SRC)/tkc.c \
-	         $(DIR_SRC)/start.c     
+SRC_LIST = $(DIR_SRC)/QyAppMain.c  \
+					 $(DIR_SRC)/tkc.c  \
+					 
+					 
+INCLUDES  = -I$(DIR_SRC) -I./inc
 
-INCLUDES  = -I$(DIR_SRC)
+LIBS     = ./src/start.o

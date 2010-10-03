@@ -24,7 +24,7 @@ extern int main(int argc , void * argv[]);
  __global_reg(6) int R9;
 
 
-void rtcinit(int rtaddr)
+static void rtcinit(int rtaddr)
 {
     char * ro_start;
 	char * rw_start;
@@ -44,6 +44,7 @@ void rtcinit(int rtaddr)
 
 
 #pragma arm section code = "Dynamic_entry_sec"
+
 int Dynamic_entry(int argc, void * argv[])
 {
     unsigned long iReturnAddr;	    
@@ -52,7 +53,8 @@ int Dynamic_entry(int argc, void * argv[])
         MOV iReturnAddr,PC
     }
 	rtcinit(iReturnAddr);
-	return   main(argc, argv);
+	main(argc, argv);
+    return R9;
 }
 
 #pragma arm section code

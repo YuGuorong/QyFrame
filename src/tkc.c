@@ -1,7 +1,7 @@
 
 #include <string.h>
 #include <stdio.h>
-
+#include "qyadaptor.h"
 
 typedef int (*strfnx)(char * ptr);
 
@@ -20,11 +20,11 @@ typedef struct tstint
 
 int g_QyPid = 0xccddee;
 int g_QyVid = 0x33aa5577;
-char plink [] = {"Hellow ygr world!"};
+char plink [] = {"Hello QINYI!"};
 
 int Testdynload(TST_INPUT *pinput)
 {
-	char tmps[32]={"ygr:"};
+	char tmps[32]={"lanner:"};
 	pinput->pfnx_Mtk(tmps);
 	sprintf(tmps, "[%X, %X]",g_QyPid++, g_QyVid);
 	strcat(pinput->pstrin,tmps);
@@ -34,12 +34,12 @@ int Testdynload(TST_INPUT *pinput)
 
 int Teststrcan(char *a)
 {
-	strcpy(a, "ygr test mtk");
+	strcpy(a, "YGR TEST/QY");
 	return 0;	
 }
 	
  
-int main(int argc , void * argv[])
+int test_main(int argc , void * argv[])
 {
 
 	TST_INPUT * pin = (TST_INPUT * )argv[0];
