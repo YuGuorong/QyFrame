@@ -53,7 +53,7 @@ genelf : $(OBJS)
 	
 $(OUT_DIR)/%.o: $(DIR_SRC)/%.c
 	@echo compile $< to $@ 
-	$(CC32) -c -o $@ $(INCLUDES) $(VIA) $(VIAC) $(subst $(DIR_DIR),$(OUT_SRC),$<)  2>>$(GEN_LOG)
+	$(CC32) -c -o $@ $(INCLUDES) $(VIA) $(VIAC) $(subst $(DIR_DIR),$(OUT_SRC),$<)  #2>>$(GEN_LOG)
 
 LINKOPT = -symdefs $(SYMBLE_FILE) -list $(MAP_FILE)
 	
