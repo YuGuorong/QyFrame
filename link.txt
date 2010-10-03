@@ -1,0 +1,1 @@
+-info totals -info unused -entry Dynamic_entry -ro-base 0 -map -armlib -first start.o(Dynamic_entry_sec) -rwpi -info sizes -xref -ropi

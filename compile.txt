@@ -1,0 +1,1 @@
+-fpu None -O2 -Otime -apcs /rwpi/interwork/ropi -cpu ARM9EJ-S -fy
