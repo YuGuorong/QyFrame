@@ -19,7 +19,7 @@ void mmi_scan_display_popup(UI_string_type string, mmi_event_notify_enum event_i
     g_pMtkAdp->qy_mmi_scan_display_popup(string, event_id);
 }
 
-void QyAdpTrace(char * fmt, ...)
+void QyAdpTrace(char * fmt)
 {
     g_pMtkAdp->qy_QyAdpTrace(fmt);
 }

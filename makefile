@@ -1,9 +1,11 @@
 .PHONY : makeoutdir  cpheader  genbin genelf  clean 
 
+CDEFINE  = 
 include source.mak	         
 
 OUTDIR_   = ./o
 OUT_DIR   =  $(strip $(OUTDIR_))
+CDEFINE  += -D QY_PIKE_PROJ 
 
 TARGET	 = $(OUT_DIR)/AppsEntry.axf
 
