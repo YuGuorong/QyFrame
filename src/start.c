@@ -20,8 +20,7 @@ extern char Image$$ZI$$Limit[];// 输出 ZI 输出节末尾后面的字节的地址。
 
 
 extern int main(int argc , void * argv[]);
-
- __global_reg(6) int R9;
+__global_reg(6) int R9;
 
 
 static void rtcinit(int rtaddr)
@@ -33,7 +32,7 @@ static void rtcinit(int rtaddr)
     //unsigned long ro_len = RO_LENGTH;
     unsigned long zi_len = ZI_LENGTH;
 
-    ro_start = (char *)(rtaddr-0x14);
+    ro_start = (char *)(rtaddr);
     rw_start = ro_start + RO_LENGTH;
     zi_start = rw_start + RW_LENGTH;
 	R9 = (int)rw_start ;
@@ -45,13 +44,8 @@ static void rtcinit(int rtaddr)
 
 #pragma arm section code = "Dynamic_entry_sec"
 
-int Dynamic_entry(int argc, void * argv[])
+int Dynamic_entry(int argc, void * argv[], unsigned long iReturnAddr)
 {
-    unsigned long iReturnAddr;	    
-    __asm
-    {
-        MOV iReturnAddr,PC
-    }
 	rtcinit(iReturnAddr);
 	main(argc, argv);
     return R9;

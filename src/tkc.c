@@ -1,7 +1,7 @@
 
 #include <string.h>
 #include <stdio.h>
-#include "qyadaptor.h"
+#include "QinYiApp.h"
 
 typedef int (*strfnx)(char * ptr);
 

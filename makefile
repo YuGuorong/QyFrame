@@ -1,4 +1,4 @@
-.PHONY : makeoutdir  genbin genelf  clean 
+.PHONY : makeoutdir  cpheader  genbin genelf  clean 
 
 include source.mak	         
 
@@ -38,13 +38,16 @@ VIA =	  -via
 OBJS = $(SRC_LIST:.c=.o)
 OBJS := $(subst $(DIR_SRC),$(OUT_DIR),$(OBJS))
 
+DEPS =  $(OBJS:.o=.d)
+#DEPS :=  $(subst $(DIR_SRC),$(OUT_DIR),$(DEPS))
+
 RM = rm -f
 RD = rm -rf
 
 #RM = del /F /S /Q
 #RD = rd  /S /Q
   
-all:	makeoutdir genbin
+all:	makeoutdir cpheader genbin
   
 genbin: genelf 
 	@echo Begin create bin file...
@@ -54,30 +57,33 @@ genelf : $(OBJS)
 	@echo create elf file.
 	$(LINK) -o $(TARGET)  $(VIA) $(VIAL) $(LINKOPT) $(OBJS) $(LIBS)
 	
-DEPS =  $(OBJS:.o=.d)
-#DEPS :=  $(subst $(DIR_SRC),$(OUT_DIR),$(DEPS))
 include  $(DEPS)
 
-$(OUT_DIR)/%.d: $(DIR_SRC)/%.c
-	@echo Generating dependency files\
-	-@set -e; \
+./$(OUT_DIR)/%.d: ./$(DIR_SRC)/%.c
+	@echo Generating dependency $@ of $< \
+	-set -e; \
 	$(RM)  $@; \
 	$(GCC) -MM -c $(INCLUDES) $< > $@.$$$$; \
-	sed -e 's,\($*\)\.o[ :]*,\1.o $@ : ,g' -e "s/^/o\//g" < $@.$$$$ > $@; \
+	sed -e 's,^\($*\)\.o[ :]*,\1.o .\/$@ : ,' -e "1s/^/.\/o\//" < $@.$$$$ > $@; \
 	$(RM) $@.$$$$
 		
-$(OUT_DIR)/%.o: $(DIR_SRC)/%.c
+./$(OUT_DIR)/%.o: ./$(DIR_SRC)/%.c
 	@echo compile $< to $@ 
 	$(CC32) -c -o $@ $(INCLUDES) $(VIA) $(VIAC) $(subst $(DIR_DIR),$(OUT_SRC),$<)  #2>>$(GEN_LOG)
 
 LINKOPT = -symdefs $(SYMBLE_FILE) -list $(MAP_FILE)
 	
 makeoutdir:
-	@echo makeing output dir...
+	@echo makeing output dir... $(DEPS)
 	-@mkdir  -p  $(OUT_DIR)
 	@#if not exist $(OUT_DIR) md $(OUT_DIR) | echo 创建了$(OUT_DIR)目录 
 	@echo Record warnnings and error: > $(strip $(GEN_LOG))
 		
+cpheader: $(DIR_SRC)/qyadaptor.h
+
+$(DIR_SRC)/qyadaptor.h: $(DIR_MTK)/qyadaptor.h 
+		cp $(DIR_MTK)/qyadaptor.h $(DIR_SRC)/qyadaptor.h
+			
 	
 clean :
 	@echo clean all generated files.
