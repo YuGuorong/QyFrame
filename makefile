@@ -87,7 +87,7 @@ $(DIR_SRC)/qyadaptor.h: $(DIR_MTK)/qyadaptor.h
 	
 clean :
 	@echo clean all generated files.
-	-@$(RM) $(OBJS) $(TARGET) $(BIN) $(SYMBLE_FILE) $(MAP_FILE) $(DEPS)
+	-@$(RM) $(OBJS) $(TARGET) $(BIN) $(SYMBLE_FILE) $(MAP_FILE) $(DEPS) $(GEN_LOG)
 	@#-$(RD) $(OUT_DIR)
 
 
