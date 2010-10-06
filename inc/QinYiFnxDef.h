@@ -8,6 +8,7 @@
 extern QY_ADAPTOR * g_pMtk;
 
  
+
 #define kal_wsprintf 	g_pMtk->qy_kal_wsprintf
 #define kal_prompt_trace 	g_pMtk->qy_kal_prompt_trace
 
@@ -65,6 +66,7 @@ extern QY_ADAPTOR * g_pMtk;
 
 #define FS_Rename 	g_pMtk->qy_FS_Rename
 #define FS_XDelete 	g_pMtk->qy_FS_XDelete
+#define FS_GetDrive 	g_pMtk->qy_FS_GetDrive
 
 #define QySocketConnect 	g_pMtk->qy_QySocketConnect
 #define soc_send 	g_pMtk->qy_soc_send
@@ -78,6 +80,11 @@ extern QY_ADAPTOR * g_pMtk;
 #define wgui_status_icon_show_status_icon 	g_pMtk->qy_wgui_status_icon_show_status_icon
 #define wgui_status_icon_hide_status_icon 	g_pMtk->qy_wgui_status_icon_hide_status_icon
 #define wgui_status_icon_update_status_icons 	g_pMtk->qy_wgui_status_icon_update_status_icons
+#define set_softkey_label 	g_pMtk->qy_set_softkey_label
+
+#define get_image 	g_pMtk->qy_get_image
+#define get_string 	g_pMtk->qy_get_string
+#define GetRootTitleIcon 	g_pMtk->qy_GetRootTitleIcon
 
 #define AddListSelItem 	g_pMtk->qy_AddListSelItem
 #define AddListFullEditItem 	g_pMtk->qy_AddListFullEditItem
@@ -122,6 +129,13 @@ extern QY_ADAPTOR * g_pMtk;
 #define PowerAndEndKeyHandler 	g_pMtk->qy_PowerAndEndKeyHandler
 #define ClearKeyEvents 	g_pMtk->qy_ClearKeyEvents
 
+#define get_softkey_label 	g_pMtk->qy_get_softkey_label
+#define set_softkey_icon 	g_pMtk->qy_set_softkey_icon
+#define get_softkey_icon 	g_pMtk->qy_get_softkey_icon
+#define change_softkey 	g_pMtk->qy_change_softkey
+#define show_softkey 	g_pMtk->qy_show_softkey
+#define clear_softkey_handler 	g_pMtk->qy_clear_softkey_handler
+
 #define gdi_layer_lock_frame_buffer 	g_pMtk->qy_gdi_layer_lock_frame_buffer
 #define gdi_layer_unlock_frame_buffer 	g_pMtk->qy_gdi_layer_unlock_frame_buffer
 
@@ -130,10 +144,68 @@ extern QY_ADAPTOR * g_pMtk;
 #define DisplayPopup 	g_pMtk->qy_DisplayPopup
 #define DisplayConfirm 	g_pMtk->qy_DisplayConfirm
 #define RedrawCategory57Screen 	g_pMtk->qy_RedrawCategory57Screen
+#define SetHighlightIndex 	g_pMtk->qy_SetHighlightIndex
+#define RedrawListCategoryScreen 	g_pMtk->qy_RedrawListCategoryScreen
+
+#define InitializeCategory57Screen 	g_pMtk->qy_InitializeCategory57Screen
+#define ExitCategory57Screen 	g_pMtk->qy_ExitCategory57Screen
+#define CloseCategory57Screen 	g_pMtk->qy_CloseCategory57Screen
+#define SetInlineItemActivation 	g_pMtk->qy_SetInlineItemActivation
+#define DisableInlineItem 	g_pMtk->qy_DisableInlineItem
+#define EnableInlineItem 	g_pMtk->qy_EnableInlineItem
+#define LeftJustifyInlineItem 	g_pMtk->qy_LeftJustifyInlineItem
+#define RightJustifyInlineItem 	g_pMtk->qy_RightJustifyInlineItem
+#define CenterJustifyInlineItem 	g_pMtk->qy_CenterJustifyInlineItem
+#define SetInlineDoneFlag 	g_pMtk->qy_SetInlineDoneFlag
+#define DisableCategory57ScreenDone 	g_pMtk->qy_DisableCategory57ScreenDone
+#define EnableCategory57ScreenDone 	g_pMtk->qy_EnableCategory57ScreenDone
+#define SetCategory57ScreenRSKClear 	g_pMtk->qy_SetCategory57ScreenRSKClear
+#define SetCategory57LeftSoftkeyFunction 	g_pMtk->qy_SetCategory57LeftSoftkeyFunction
+#define SetCategory57RightSoftkeyFunctions 	g_pMtk->qy_SetCategory57RightSoftkeyFunctions
+#define SetCategory57Data 	g_pMtk->qy_SetCategory57Data
+
+#define SetInlineItemTextEdit 	g_pMtk->qy_SetInlineItemTextEdit
+#define RegisterInlineTextEditValidationFunction 	g_pMtk->qy_RegisterInlineTextEditValidationFunction
+#define SetInlineTextEditCustomFunction 	g_pMtk->qy_SetInlineTextEditCustomFunction
+#define ReConfigureInlineItemTextEdit 	g_pMtk->qy_ReConfigureInlineItemTextEdit
+#define inline_text_edit_set_RSK_label 	g_pMtk->qy_inline_text_edit_set_RSK_label
+#define SetInlineItemFullScreenEdit 	g_pMtk->qy_SetInlineItemFullScreenEdit
+#define RegisterInlineFullScreenEditValidationFunction 	g_pMtk->qy_RegisterInlineFullScreenEditValidationFunction
+#define SetInlineItemMultiLineEdit 	g_pMtk->qy_SetInlineItemMultiLineEdit
+#define SetInlineMultiLineRdOnly 	g_pMtk->qy_SetInlineMultiLineRdOnly
+#define set_inscreen_multi_line_input_box_changed 	g_pMtk->qy_set_inscreen_multi_line_input_box_changed
+
+#define SetInlineItemImageText 	g_pMtk->qy_SetInlineItemImageText
+#define SetInlineItemCaption 	g_pMtk->qy_SetInlineItemCaption
+#define SetInlineItemDisplayOnly 	g_pMtk->qy_SetInlineItemDisplayOnly
+#define SetInlineItemSelect 	g_pMtk->qy_SetInlineItemSelect
+#define RegisterInlineSelectHighlightHandler 	g_pMtk->qy_RegisterInlineSelectHighlightHandler
+#define GetInlineSelectHighlightedItem 	g_pMtk->qy_GetInlineSelectHighlightedItem
+#define SetInlineItemUserDefinedSelect 	g_pMtk->qy_SetInlineItemUserDefinedSelect
+#define SetInlineItemDOWSelect 	g_pMtk->qy_SetInlineItemDOWSelect
+#define SetInlineItemDate 	g_pMtk->qy_SetInlineItemDate
+#define SetInlineItemTime 	g_pMtk->qy_SetInlineItemTime
+#define SetInlineItemIP4 	g_pMtk->qy_SetInlineItemIP4
+#define RegisterAttachmentLskFunction 	g_pMtk->qy_RegisterAttachmentLskFunction
+#define RegisterAttachmentRskFunction 	g_pMtk->qy_RegisterAttachmentRskFunction
+#define RegisterAttachmentHighlightedFunction 	g_pMtk->qy_RegisterAttachmentHighlightedFunction
+#define SetInlineItemImageAttachment 	g_pMtk->qy_SetInlineItemImageAttachment
+#define ClearAttachmentImage 	g_pMtk->qy_ClearAttachmentImage
+#define AddEmailImageAttachmentUI 	g_pMtk->qy_AddEmailImageAttachmentUI
+#define ClearAllAttachmentImages 	g_pMtk->qy_ClearAllAttachmentImages
+#define SetHighlightedAttachment 	g_pMtk->qy_SetHighlightedAttachment
+#define DisableInlineItemHighlight 	g_pMtk->qy_DisableInlineItemHighlight
+#define EnableInlineItemHighlight 	g_pMtk->qy_EnableInlineItemHighlight
+
+#define ShowCategory353Screen 	g_pMtk->qy_ShowCategory353Screen
+
+#define ShowCategory57Screen_ex 	g_pMtk->qy_ShowCategory57Screen_ex
 
 #define ShowCategory79Screen 	g_pMtk->qy_ShowCategory79Screen
 
 #define ShowCategory111Screen 	g_pMtk->qy_ShowCategory111Screen
 #define SetCategory111RightSoftkeyFunction 	g_pMtk->qy_SetCategory111RightSoftkeyFunction
 #define wgui_inputs_register_validation_func 	g_pMtk->qy_wgui_inputs_register_validation_func
+
+
 

@@ -37,6 +37,9 @@ typedef int                     MMI_BOOL;
 typedef U8*					    PU8;
 typedef U16*					PU16;
 typedef U32*					PU32;
+typedef S8*					    PS8;
+typedef S16*					PS16;
+typedef S32*					PS32;
 
 #ifndef NULL
 #ifdef __cplusplus
@@ -46,6 +49,8 @@ typedef U32*					PU32;
 #endif
 #endif
 
+#define MMI_TRUE                                    (!0)
+#define MMI_FALSE                                   0
 
 #endif /*QY_TYPEDEF_H*/
 

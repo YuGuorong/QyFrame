@@ -60,7 +60,7 @@ genelf : $(OBJS)
 	$(LINK) -o $(TARGET)  $(VIA) $(VIAL) $(LINKOPT) $(OBJS) $(LIBS)
 	
 include  $(DEPS)
-
+	
 ./$(OUT_DIR)/%.d: ./$(DIR_SRC)/%.c
 	@echo Generating dependency $@ of $< \
 	-set -e; \
@@ -81,17 +81,10 @@ makeoutdir:
 	@#if not exist $(OUT_DIR) md $(OUT_DIR) | echo 创建了$(OUT_DIR)目录 
 	@echo Record warnnings and error: > $(strip $(GEN_LOG))
 		
-cpheader: $(DIR_SRC)/qyadaptor.h  $(DIR_SRC)/QinYiprot.h
+cpheader: $(DIR_SRC)/QinYiprot.h
 
-$(DIR_SRC)/qyadaptor.h: $(DIR_MTK)/qyadaptor.h 
-		cp $(DIR_MTK)/qyadaptor.h $(DIR_SRC)/qyadaptor.h
+$(DIR_SRC)/QinYiprot.h: $(DIR_MTK)/QinYiprot.h 	
 
-$(DIR_SRC)/QinYiprot.h: $(DIR_MTK)/QinYiprot.h 
-		cp $(DIR_MTK)/QinYiprot.h $(DIR_SRC)/QinYiprot.h
-		cp $(DIR_MTK)/*.awk $(DIR_SRC)/  -f
-		cp $(DIR_MTK)/*.bat $(DIR_SRC)/ -f
-		cd (DIR_SRC)
-		GenHeaders.bat
 	
 clean :
 	@echo clean all generated files.

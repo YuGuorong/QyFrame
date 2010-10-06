@@ -8,8 +8,6 @@
 
 typedef struct tag_qy_adaptor 
 {
-
-
 	void (*qy_kal_wsprintf)(WCHAR *outstr, char *fmt,...); 
 	void (*qy_kal_prompt_trace)(module_type type, const kal_char *fmt,...); 
 	
@@ -68,6 +66,7 @@ typedef struct tag_qy_adaptor
 	
 	int (*qy_FS_Rename)(const WCHAR * FileName, const WCHAR * NewName); 
 	int (*qy_FS_XDelete)(const WCHAR * FullPath, UINT Flag, BYTE *RecursiveStack, const UINT StackSize); 
+	int (*qy_FS_GetDrive)(UINT Type, UINT Serial, UINT AltMask); 
 	
 	kal_int32 (*qy_QySocketConnect)(void); 
 	kal_int32 (*qy_soc_send)( kal_int8 s,const void *buf, kal_int32 len,kal_uint8 flags); 
@@ -81,6 +80,11 @@ typedef struct tag_qy_adaptor
 	void (*qy_wgui_status_icon_show_status_icon)(S16 icon_ID); 
 	void (*qy_wgui_status_icon_hide_status_icon)(S16 icon_ID); 
 	void (*qy_wgui_status_icon_update_status_icons)(void); 
+	void (*qy_set_softkey_label)(UI_string_type s, WGUI_SOFTKEY_ENUM key); 
+	
+	PU8 (*qy_get_image)(U16 i); 
+	UI_string_type (*qy_get_string)(MMI_ID_TYPE i); 
+	U16 (*qy_GetRootTitleIcon)(U16 ItemId); 
 	
 	
 	int (*qy_AddListSelItem)(int idx, U8 ** strSels, int sels, int* pnVal,void (*HighlightListSel)(S32 )); 
@@ -126,6 +130,14 @@ typedef struct tag_qy_adaptor
 	void (*qy_PowerAndEndKeyHandler)(void); 
 	void (*qy_ClearKeyEvents)(void); 
 	
+	
+	UI_string_type (*qy_get_softkey_label)(WGUI_SOFTKEY_ENUM key); 
+	void (*qy_set_softkey_icon)(PU8 i, WGUI_SOFTKEY_ENUM key); 
+	PU8 (*qy_get_softkey_icon)(WGUI_SOFTKEY_ENUM key); 
+	void (*qy_change_softkey)(U16 s, U16 i, WGUI_SOFTKEY_ENUM key); 
+	void (*qy_show_softkey)(WGUI_SOFTKEY_ENUM key); 
+	void (*qy_clear_softkey_handler)(WGUI_SOFTKEY_ENUM key); 
+	
 	void (*qy_gdi_layer_lock_frame_buffer)(void); 
 	void (*qy_gdi_layer_unlock_frame_buffer)(void); 
 	
@@ -135,7 +147,109 @@ typedef struct tag_qy_adaptor
 	void (*qy_DisplayPopup)(U8 *string, U16 imageId, U8 imageOnBottom, U32 popupDuration, U8 toneId); 
 	void (*qy_DisplayConfirm)(U16 LSK_str,U16 LSK_img,U16 RSK_str,U16 RSK_img,UI_string_type message,MMI_ID_TYPE message_image,U8 toneId); 
 	void (*qy_RedrawCategory57Screen)(void); 
+	void (*qy_SetHighlightIndex)(S32 nIndex); 
+	void (*qy_RedrawListCategoryScreen)(void); 
 	
+	void (*qy_InitializeCategory57Screen)(void); 
+	void (*qy_ExitCategory57Screen)(void); 
+	void (*qy_CloseCategory57Screen)(void); 
+	void (*qy_SetInlineItemActivation)(InlineItem *item, S32 key_code, S32 key_event); 
+	void (*qy_DisableInlineItem)(InlineItem *item, S32 index); 
+	void (*qy_EnableInlineItem)(InlineItem *item, S32 index); 
+	void (*qy_LeftJustifyInlineItem)(InlineItem *i); 
+	void (*qy_RightJustifyInlineItem)(InlineItem *i); 
+	void (*qy_CenterJustifyInlineItem)(InlineItem *i); 
+	void (*qy_SetInlineDoneFlag)(PU8 history_buffer); 
+	void (*qy_DisableCategory57ScreenDone)(void); 
+	void (*qy_EnableCategory57ScreenDone)(void); 
+	void (*qy_SetCategory57ScreenRSKClear)(void); 
+	void (*qy_SetCategory57LeftSoftkeyFunction)(void (*LSK_function) (void)); 
+	void (*qy_SetCategory57RightSoftkeyFunctions)(void (*done_function) (void), void (*back_function) (void)); 
+	void (*qy_SetCategory57Data)(InlineItem *list_of_items, S32 number_of_items, PU8 data); 
+	
+	void (*qy_SetInlineItemTextEdit)(InlineItem *item, PU8 buffer, S32 buffer_size, U32 input_type); 
+	void (*qy_RegisterInlineTextEditValidationFunction)(InlineItem *item, void (*f) (PU8 buffer, PU8 cursor, S32 text_length)); 
+	void (*qy_SetInlineTextEditCustomFunction)(InlineItem *item, void (*f) (void)); 
+	void (*qy_ReConfigureInlineItemTextEdit)(InlineItem *item, PU8 buffer, S32 buffer_size, U32 input_type); 
+	void (*qy_inline_text_edit_set_RSK_label)(UI_string_type inline_text_edit_RSK_label); 
+	void (*qy_SetInlineItemFullScreenEdit)( 
+            InlineItem *item,
+            U16 title,
+            U16 title_icon,
+            PU8 buffer,
+            S32 buffer_size,
+            U32 input_type);
+	void (*qy_RegisterInlineFullScreenEditValidationFunction)(InlineItem *item,void (*f) (PU8 buffer, PU8 cursor, S32 text_length)); 
+	void (*qy_SetInlineItemMultiLineEdit)(InlineItem *item, PU8 buffer, PU8 title, S32 buffer_size, U32 input_type); 
+	void (*qy_SetInlineMultiLineRdOnly)(InlineItem *item, PU8 buffer, S32 buffer_size, U32 input_type, U8); 
+	void (*qy_set_inscreen_multi_line_input_box_changed)(void); 
+	
+	void (*qy_SetInlineItemImageText)( 
+            InlineItem *item,
+            PU8 text,
+            PU8 image1,
+            PU8 image2,
+            PU8 image3,
+            S32 buf_size,
+            U16 title,
+            U16 title_icon,
+            U32 input_type);
+	void (*qy_SetInlineItemCaption)(InlineItem *item, PU8 text_p); 
+	void (*qy_SetInlineItemDisplayOnly)(InlineItem *item, PU8 text_p); 
+	void (*qy_SetInlineItemSelect)(InlineItem *item, S32 n_items, PU8 *list_of_items, S32 *highlighted_item); 
+	void (*qy_RegisterInlineSelectHighlightHandler)(InlineItem *item, void (*f) (S32 item_index)); 
+	S32 (*qy_GetInlineSelectHighlightedItem)(void); 
+	void (*qy_SetInlineItemUserDefinedSelect)(InlineItem *item, PU8 (*current_item_callback) (void),PU8 (*previous_item_callback) (void), PU8 (*next_item_callback) (void)); 
+	void (*qy_SetInlineItemDOWSelect)(InlineItem *item, S32 item_index, PU8 list_of_states); 
+	void (*qy_SetInlineItemDate)(InlineItem *item, PU8 day_buffer, PU8 month_buffer, PU8 year_buffer,void (*f) (PU8 string_buffer, PU8 day_buffer, PU8 month_buffer, PU8 year_buffer)); 
+	void (*qy_SetInlineItemTime)(InlineItem *item, PU8 hours_buffer, PU8 minutes_buffer, PU8 AM_PM_flag,void (*f) (PU8 string_buffer, PU8 hours_buffer, PU8 minutes_buffer, PU8 AM_PM_flag)); 
+	void (*qy_SetInlineItemIP4)(InlineItem *item, PU8 b1, PU8 b2, PU8 b3, PU8 b4,void (*f) (PU8 string_buffer, PU8 b1, PU8 b2, PU8 b3, PU8 b4)); 
+	void (*qy_RegisterAttachmentLskFunction)(InlineItem *item, void (*f) (PU8 image, UI_string_type str)); 
+	void (*qy_RegisterAttachmentRskFunction)(InlineItem *item, void (*f) (PU8 image, UI_string_type str)); 
+	void (*qy_RegisterAttachmentHighlightedFunction)(InlineItem * item, void (*f)(S32 index)); 
+	void (*qy_SetInlineItemImageAttachment)( 
+                InlineItem *item,
+                PU8 image1,
+                PU8 image2,
+                PU8 image3,
+                U16 title,
+                U16 title_icon,
+                U8 highlight_image);
+	void (*qy_ClearAttachmentImage)(InlineItem *item, S32 index); 
+	void (*qy_AddEmailImageAttachmentUI)(InlineItem *item, wgui_inline_images_detail *image_details); 
+	void (*qy_ClearAllAttachmentImages)(InlineItem *item, S32 attachments_present); 
+	void (*qy_SetHighlightedAttachment)(wgui_inline_item *inline_item, S32 index); 
+	void (*qy_DisableInlineItemHighlight)(InlineItem *i); 
+	void (*qy_EnableInlineItemHighlight)(InlineItem *item); 
+	
+	void (*qy_ShowCategory353Screen)( 
+            U8 *title,
+            U16 title_icon,
+            U16 left_softkey,
+            U16 left_softkey_icon,
+            U16 right_softkey,
+            U16 right_softkey_icon,
+            S32 number_of_items,
+            U8 **list_of_items,
+            U16 *list_of_icons,
+            U8 **list_of_descriptions,
+            S32 flags,
+            S32 highlighted_item,
+            U8 *history_buffer);
+
+	void (*qy_ShowCategory57Screen_ex)( 
+            U8*  title,
+            U16 title_icon,
+            U16 left_softkey,
+            U16 left_softkey_icon,
+            U16 right_softkey,
+            U16 right_softkey_icon,
+            S32 number_of_items,
+            U16 *list_of_icons,
+            InlineItem *list_of_items,
+            S32 highlighted_item,
+            U8 *history_buffer);    
+
 	void (*qy_ShowCategory79Screen)( 
             UI_string_type title,
             PU8 title_icon,
@@ -163,9 +277,18 @@ typedef struct tag_qy_adaptor
 	void (*qy_SetCategory111RightSoftkeyFunction)(void (*f) (void), MMI_key_event_type k); 
 	void (*qy_wgui_inputs_register_validation_func)(void (*f) (U8 *, U8 *, S32)); 
 	
-	
-	
-	
-	
-	
+    //Gloabal variables here
+    int Globalbase;    
+    int IdleAppResBase;
+    int MainMenuResBase;
+    const U16 * pIndexIconsImageList;
+    U8 *  pcurrentHighlightIndex;
+    int ModMMI;
+    int SrcStart;
+    int SrcEnd;
+    int TmIdStart;
+    int TmIdEnd;
+
+    void * gp_inline_items;
+
 }QY_ADAPTOR; 

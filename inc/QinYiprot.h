@@ -13,14 +13,16 @@ typedef void (*pfncScanDone)(U16 *strcode);
 #define HideStatusIcon          wgui_status_icon_hide_status_icon
 #define UpdateStatusIcons       wgui_status_icon_update_status_icons
 #endif
+ 
+
+// Add export interface here. just declare prototype only, and then regenerate other headers
+#if !defined(QY_PIKE_PROJ) || (QY_PIKE_PROJ  == 0) 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-            #ifndef QY_PIKE_PROJ    
     void kal_wsprintf(WCHAR *outstr, char *fmt,...);
     void kal_prompt_trace(module_type type, const kal_char *fmt,...);
-            #endif /*QY_PIKE_PROJ */
             
     int kal_wstrlen(const WCHAR *wstr);
     WCHAR *kal_wstrcpy(WCHAR *to, const WCHAR *from);
@@ -77,6 +79,7 @@ extern "C" {
 
     int FS_Rename(const WCHAR * FileName, const WCHAR * NewName);
     int FS_XDelete(const WCHAR * FullPath, UINT Flag, BYTE *RecursiveStack, const UINT StackSize);
+    int FS_GetDrive(UINT Type, UINT Serial, UINT AltMask);
 
     kal_int32 QySocketConnect(void);
     kal_int32 soc_send( kal_int8 s,const void *buf, kal_int32 len,kal_uint8 flags);
@@ -90,8 +93,13 @@ extern "C" {
     void wgui_status_icon_show_status_icon(S16 icon_ID);
     void wgui_status_icon_hide_status_icon(S16 icon_ID);
     void wgui_status_icon_update_status_icons(void);
+    void set_softkey_label(UI_string_type s, WGUI_SOFTKEY_ENUM key);
 
+    PU8 get_image(U16 i);
+    UI_string_type get_string(MMI_ID_TYPE i);
+    U16 GetRootTitleIcon(U16 ItemId);
 
+    
     int AddListSelItem(int idx, U8 ** strSels, int sels, int* pnVal,void (*HighlightListSel)(S32 ));
     int AddListFullEditItem(int idx, U16 * title, U16 * buff, int buf_size, int type, void (*fnxCostomize)(void));
     int AddListItem(int idx, U16 * text, int chars, int type);
@@ -135,6 +143,14 @@ extern "C" {
     void PowerAndEndKeyHandler(void);              
     void ClearKeyEvents(void);
 
+    
+    UI_string_type get_softkey_label(WGUI_SOFTKEY_ENUM key);
+    void set_softkey_icon(PU8 i, WGUI_SOFTKEY_ENUM key);
+    PU8 get_softkey_icon(WGUI_SOFTKEY_ENUM key);
+    void change_softkey(U16 s, U16 i, WGUI_SOFTKEY_ENUM key);
+    void show_softkey(WGUI_SOFTKEY_ENUM key);
+    void clear_softkey_handler(WGUI_SOFTKEY_ENUM key);
+    
     void gdi_layer_lock_frame_buffer(void);
     void gdi_layer_unlock_frame_buffer(void);
 
@@ -144,6 +160,108 @@ extern "C" {
     void DisplayPopup(U8 *string, U16 imageId, U8 imageOnBottom, U32 popupDuration, U8 toneId);
     void DisplayConfirm(U16 LSK_str,U16 LSK_img,U16 RSK_str,U16 RSK_img,UI_string_type message,MMI_ID_TYPE message_image,U8 toneId);
     void RedrawCategory57Screen(void);
+    void SetHighlightIndex(S32 nIndex);
+    void RedrawListCategoryScreen(void);
+
+    void InitializeCategory57Screen(void);
+    void ExitCategory57Screen(void);
+    void CloseCategory57Screen(void);
+    void SetInlineItemActivation(InlineItem *item, S32 key_code, S32 key_event);
+    void DisableInlineItem(InlineItem *item, S32 index);
+    void EnableInlineItem(InlineItem *item, S32 index);
+    void LeftJustifyInlineItem(InlineItem *i);
+    void RightJustifyInlineItem(InlineItem *i);
+    void CenterJustifyInlineItem(InlineItem *i);
+    void SetInlineDoneFlag(PU8 history_buffer);
+    void DisableCategory57ScreenDone(void);
+    void EnableCategory57ScreenDone(void);
+    void SetCategory57ScreenRSKClear(void);
+    void SetCategory57LeftSoftkeyFunction(void (*LSK_function) (void));
+    void SetCategory57RightSoftkeyFunctions(void (*done_function) (void), void (*back_function) (void));
+    void SetCategory57Data(InlineItem *list_of_items, S32 number_of_items, PU8 data);
+
+    void SetInlineItemTextEdit(InlineItem *item, PU8 buffer, S32 buffer_size, U32 input_type);
+    void RegisterInlineTextEditValidationFunction(InlineItem *item, void (*f) (PU8 buffer, PU8 cursor, S32 text_length));
+    void SetInlineTextEditCustomFunction(InlineItem *item, void (*f) (void));
+    void ReConfigureInlineItemTextEdit(InlineItem *item, PU8 buffer, S32 buffer_size, U32 input_type);
+    void inline_text_edit_set_RSK_label(UI_string_type inline_text_edit_RSK_label);
+    void SetInlineItemFullScreenEdit(
+            InlineItem *item,
+            U16 title,
+            U16 title_icon,
+            PU8 buffer,
+            S32 buffer_size,
+            U32 input_type);
+    void RegisterInlineFullScreenEditValidationFunction(InlineItem *item,void (*f) (PU8 buffer, PU8 cursor, S32 text_length));
+    void SetInlineItemMultiLineEdit(InlineItem *item, PU8 buffer, PU8 title, S32 buffer_size, U32 input_type);
+    void SetInlineMultiLineRdOnly(InlineItem *item, PU8 buffer, S32 buffer_size, U32 input_type, U8);
+    void set_inscreen_multi_line_input_box_changed(void);
+
+    void SetInlineItemImageText(
+            InlineItem *item,
+            PU8 text,
+            PU8 image1,
+            PU8 image2,
+            PU8 image3,
+            S32 buf_size,
+            U16 title,
+            U16 title_icon,
+            U32 input_type);
+    void SetInlineItemCaption(InlineItem *item, PU8 text_p);
+    void SetInlineItemDisplayOnly(InlineItem *item, PU8 text_p);
+    void SetInlineItemSelect(InlineItem *item, S32 n_items, PU8 *list_of_items, S32 *highlighted_item);
+    void RegisterInlineSelectHighlightHandler(InlineItem *item, void (*f) (S32 item_index));
+    S32 GetInlineSelectHighlightedItem(void);
+    void SetInlineItemUserDefinedSelect(InlineItem *item, PU8 (*current_item_callback) (void),PU8 (*previous_item_callback) (void), PU8 (*next_item_callback) (void));
+    void SetInlineItemDOWSelect(InlineItem *item, S32 item_index, PU8 list_of_states);
+    void SetInlineItemDate(InlineItem *item, PU8 day_buffer, PU8 month_buffer, PU8 year_buffer,void (*f) (PU8 string_buffer, PU8 day_buffer, PU8 month_buffer, PU8 year_buffer));
+    void SetInlineItemTime(InlineItem *item, PU8 hours_buffer, PU8 minutes_buffer, PU8 AM_PM_flag,void (*f) (PU8 string_buffer, PU8 hours_buffer, PU8 minutes_buffer, PU8 AM_PM_flag));
+    void SetInlineItemIP4(InlineItem *item, PU8 b1, PU8 b2, PU8 b3, PU8 b4,void (*f) (PU8 string_buffer, PU8 b1, PU8 b2, PU8 b3, PU8 b4));
+    void RegisterAttachmentLskFunction(InlineItem *item, void (*f) (PU8 image, UI_string_type str));
+    void RegisterAttachmentRskFunction(InlineItem *item, void (*f) (PU8 image, UI_string_type str));
+    void RegisterAttachmentHighlightedFunction(InlineItem * item, void (*f)(S32 index));
+    void SetInlineItemImageAttachment(
+                InlineItem *item,
+                PU8 image1,
+                PU8 image2,
+                PU8 image3,
+                U16 title,
+                U16 title_icon,
+                U8 highlight_image);
+    void ClearAttachmentImage(InlineItem *item, S32 index);
+    void AddEmailImageAttachmentUI(InlineItem *item, wgui_inline_images_detail *image_details);
+    void ClearAllAttachmentImages(InlineItem *item, S32 attachments_present);
+    void SetHighlightedAttachment(wgui_inline_item *inline_item, S32 index);
+    void DisableInlineItemHighlight(InlineItem *i);
+    void EnableInlineItemHighlight(InlineItem *item);
+       
+ void ShowCategory353Screen(
+            U8 *title,
+            U16 title_icon,
+            U16 left_softkey,
+            U16 left_softkey_icon,
+            U16 right_softkey,
+            U16 right_softkey_icon,
+            S32 number_of_items,
+            U8 **list_of_items,
+            U16 *list_of_icons,
+            U8 **list_of_descriptions,
+            S32 flags,
+            S32 highlighted_item,
+            U8 *history_buffer);
+
+    void ShowCategory57Screen_ex(
+            U8*  title,
+            U16 title_icon,
+            U16 left_softkey,
+            U16 left_softkey_icon,
+            U16 right_softkey,
+            U16 right_softkey_icon,
+            S32 number_of_items,
+            U16 *list_of_icons,
+            InlineItem *list_of_items,
+            S32 highlighted_item,
+            U8 *history_buffer);    
 
     void ShowCategory79Screen(
             UI_string_type title,
@@ -172,10 +290,23 @@ extern "C" {
     void SetCategory111RightSoftkeyFunction(void (*f) (void), MMI_key_event_type k);
     void wgui_inputs_register_validation_func(void (*f) (U8 *, U8 *, S32));
 
-    
+    //Gloabal variables here
+    int Globalbase;    
+    int IdleAppResBase;
+    int MainMenuResBase;
+    const U16 * pIndexIconsImageList;
+    U8 *  pcurrentHighlightIndex;
+    int ModMMI;
+    int SrcStart;
+    int SrcEnd;
+    int TmIdStart;
+    int TmIdEnd;
 
-    
+    void * gp_inline_items;
 
 #ifdef __cplusplus
 }
 #endif
+
+#endif /*QY_PIKE_PROJ */
+

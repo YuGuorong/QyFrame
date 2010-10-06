@@ -5,7 +5,8 @@
 /*********************************************************/
 
 
-#define QY_ADAPTO_ELEMENT  {	\
+#define QY_ADAPTO_ELEMENT  	\
+	\
 	kal_wsprintf,\
 	kal_prompt_trace,\
 	\
@@ -63,6 +64,7 @@
 	\
 	FS_Rename,\
 	FS_XDelete,\
+	FS_GetDrive,\
 	\
 	QySocketConnect,\
 	soc_send,\
@@ -76,6 +78,11 @@
 	wgui_status_icon_show_status_icon,\
 	wgui_status_icon_hide_status_icon,\
 	wgui_status_icon_update_status_icons,\
+	set_softkey_label,\
+	\
+	get_image,\
+	get_string,\
+	GetRootTitleIcon,\
 	\
 	AddListSelItem,\
 	AddListFullEditItem,\
@@ -120,6 +127,13 @@
 	PowerAndEndKeyHandler,\
 	ClearKeyEvents,\
 	\
+	get_softkey_label,\
+	set_softkey_icon,\
+	get_softkey_icon,\
+	change_softkey,\
+	show_softkey,\
+	clear_softkey_handler,\
+	\
 	gdi_layer_lock_frame_buffer,\
 	gdi_layer_unlock_frame_buffer,\
 	\
@@ -128,6 +142,62 @@
 	DisplayPopup,\
 	DisplayConfirm,\
 	RedrawCategory57Screen,\
+	SetHighlightIndex,\
+	RedrawListCategoryScreen,\
+	\
+	InitializeCategory57Screen,\
+	ExitCategory57Screen,\
+	CloseCategory57Screen,\
+	SetInlineItemActivation,\
+	DisableInlineItem,\
+	EnableInlineItem,\
+	LeftJustifyInlineItem,\
+	RightJustifyInlineItem,\
+	CenterJustifyInlineItem,\
+	SetInlineDoneFlag,\
+	DisableCategory57ScreenDone,\
+	EnableCategory57ScreenDone,\
+	SetCategory57ScreenRSKClear,\
+	SetCategory57LeftSoftkeyFunction,\
+	SetCategory57RightSoftkeyFunctions,\
+	SetCategory57Data,\
+	\
+	SetInlineItemTextEdit,\
+	RegisterInlineTextEditValidationFunction,\
+	SetInlineTextEditCustomFunction,\
+	ReConfigureInlineItemTextEdit,\
+	inline_text_edit_set_RSK_label,\
+	SetInlineItemFullScreenEdit,\
+	RegisterInlineFullScreenEditValidationFunction,\
+	SetInlineItemMultiLineEdit,\
+	SetInlineMultiLineRdOnly,\
+	set_inscreen_multi_line_input_box_changed,\
+	\
+	SetInlineItemImageText,\
+	SetInlineItemCaption,\
+	SetInlineItemDisplayOnly,\
+	SetInlineItemSelect,\
+	RegisterInlineSelectHighlightHandler,\
+	GetInlineSelectHighlightedItem,\
+	SetInlineItemUserDefinedSelect,\
+	SetInlineItemDOWSelect,\
+	SetInlineItemDate,\
+	SetInlineItemTime,\
+	SetInlineItemIP4,\
+	RegisterAttachmentLskFunction,\
+	RegisterAttachmentRskFunction,\
+	RegisterAttachmentHighlightedFunction,\
+	SetInlineItemImageAttachment,\
+	ClearAttachmentImage,\
+	AddEmailImageAttachmentUI,\
+	ClearAllAttachmentImages,\
+	SetHighlightedAttachment,\
+	DisableInlineItemHighlight,\
+	EnableInlineItemHighlight,\
+	\
+	ShowCategory353Screen,\
+	\
+	ShowCategory57Screen_ex,\
 	\
 	ShowCategory79Screen,\
 	\
@@ -135,4 +205,5 @@
 	SetCategory111RightSoftkeyFunction,\
 	wgui_inputs_register_validation_func,\
 	\
-};
+	\
+	\
