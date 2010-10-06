@@ -34,7 +34,7 @@ int main(int argc , void * argv[])
     g_strMainMenu[0] = (U8*)g_strMainMenu0;
     g_strMainMenu[1] = (U8*)g_strMainMenu1;
     g_strMainMenu[2] = (U8*)g_strMainMenu2;
-    g_pMtkAdp = (QY_ADAPTOR*)argv[0];
+    g_pMtk = (QY_ADAPTOR*)argv[0];
     g_testval = argc;
     ShowQinYiMenu(NULL,g_strMainMenu,NULL,3,OnQinYiSelMainMenu, NULL);
 	return 0;	

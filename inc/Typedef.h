@@ -1,5 +1,7 @@
 #ifndef QY_TYPEDEF_H
 #define QY_TYPEDEF_H
+#define QY_PIKE_PROJ 1
+
 typedef unsigned char   U8;
 typedef signed char     S8;
 typedef unsigned int    U32;
@@ -19,18 +21,22 @@ typedef signed short int        kal_int16;
 typedef unsigned int            kal_uint32;
 typedef signed int              kal_int32;
 
-typedef unsigned short WCHAR;
-typedef unsigned int   UINT;
-typedef unsigned char  BYTE;
+typedef unsigned short          WCHAR;
+typedef unsigned int            UINT;
+typedef unsigned char           BYTE;
 
-typedef void * HANDLE;
-typedef int FS_HANDLE;
+typedef void *                  HANDLE;
+typedef int                     FS_HANDLE;
 
 
-typedef U16 UI_character_type;
-typedef UI_character_type*	UI_string_type;
-typedef U8*					UI_buffer_type;
+typedef U16                     UI_character_type;
+typedef UI_character_type*	    UI_string_type;
+typedef U8*					    UI_buffer_type;
+typedef int                     MMI_BOOL;
 
+typedef U8*					    PU8;
+typedef U16*					PU16;
+typedef U32*					PU32;
 
 #ifndef NULL
 #ifdef __cplusplus
