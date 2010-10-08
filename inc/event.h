@@ -304,5 +304,54 @@ typedef enum
     /* DOM-NOT_FOR_SDK-END */
 } WGUI_SOFTKEY_ENUM;
 
+/* event */
+typedef enum
+{
+    SOC_READ    = 0x01,  /* Notify for read */
+    SOC_WRITE   = 0x02,  /* Notify for write */
+    SOC_ACCEPT  = 0x04,  /* Notify for accept */
+    SOC_CONNECT = 0x08,  /* Notify for connect */
+    SOC_CLOSE   = 0x10   /* Notify for close */
+} soc_event_enum;
+
+/* Socket return codes, negative values stand for errors */
+typedef enum
+{
+    SOC_SUCCESS           = 0,     /* success */
+    SOC_ERROR             = -1,    /* error */
+    SOC_WOULDBLOCK        = -2,    /* not done yet */
+    SOC_LIMIT_RESOURCE    = -3,    /* limited resource */
+    SOC_INVALID_SOCKET    = -4,    /* invalid socket */
+    SOC_INVALID_ACCOUNT   = -5,    /* invalid account id */
+    SOC_NAMETOOLONG       = -6,    /* address too long */
+    SOC_ALREADY           = -7,    /* operation already in progress */
+    SOC_OPNOTSUPP         = -8,    /* operation not support */
+    SOC_CONNABORTED       = -9,    /* Software caused connection abort */
+    SOC_INVAL             = -10,   /* invalid argument */
+    SOC_PIPE              = -11,   /* broken pipe */
+    SOC_NOTCONN           = -12,   /* socket is not connected */
+    SOC_MSGSIZE           = -13,   /* msg is too long */
+    SOC_BEARER_FAIL       = -14,   /* bearer is broken */
+    SOC_CONNRESET         = -15,   /* TCP half-write close, i.e., FINED */
+    SOC_DHCP_ERROR        = -16,   /* DHCP error */
+    SOC_IP_CHANGED        = -17,   /* IP has changed */
+    SOC_ADDRINUSE         = -18,   /* address already in use */
+    SOC_CANCEL_ACT_BEARER = -19    /* cancel the activation of bearer */
+} soc_error_enum;
+
+
+typedef struct
+{
+   kal_uint8       ref_count;
+   kal_uint16      msg_len;	
+   kal_int8        socket_id;    /* socket ID */
+   soc_event_enum  event_type;   /* soc_event_enum */
+   kal_bool        result;       /* notification result. KAL_TRUE: success, KAL_FALSE: error */
+   soc_error_enum  error_cause;  /* used only when EVENT is close/connect */
+   kal_int32       detail_cause; /* refer to ps_cause_enum if error_cause is
+                                  * SOC_BEARER_FAIL */
+} app_soc_notify_ind_struct;
+
+
 #endif /*QY_EVENT_H*/
 

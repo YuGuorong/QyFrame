@@ -68,9 +68,22 @@ extern QY_ADAPTOR * g_pMtk;
 #define FS_XDelete 	g_pMtk->qy_FS_XDelete
 #define FS_GetDrive 	g_pMtk->qy_FS_GetDrive
 
-#define QySocketConnect 	g_pMtk->qy_QySocketConnect
+#define mmi_frm_set_protocol_event_handler 	g_pMtk->qy_mmi_frm_set_protocol_event_handler
+#define soc_create 	g_pMtk->qy_soc_create
+#define soc_setsockopt 	g_pMtk->qy_soc_setsockopt
+#define soc_getsockopt 	g_pMtk->qy_soc_getsockopt
+#define soc_gethostbyname 	g_pMtk->qy_soc_gethostbyname
+#define soc_abort_dns_query 	g_pMtk->qy_soc_abort_dns_query
+#define soc_bind 	g_pMtk->qy_soc_bind
+#define soc_listen 	g_pMtk->qy_soc_listen
+#define soc_accept 	g_pMtk->qy_soc_accept
+#define soc_connect 	g_pMtk->qy_soc_connect
+#define soc_sendto 	g_pMtk->qy_soc_sendto
+
 #define soc_send 	g_pMtk->qy_soc_send
 #define soc_recv 	g_pMtk->qy_soc_recv
+#define soc_recvfrom 	g_pMtk->qy_soc_recvfrom
+#define soc_shutdown 	g_pMtk->qy_soc_shutdown
 #define soc_close 	g_pMtk->qy_soc_close
 
 #define open_scan_engine 	g_pMtk->qy_open_scan_engine
@@ -206,6 +219,7 @@ extern QY_ADAPTOR * g_pMtk;
 #define ShowCategory111Screen 	g_pMtk->qy_ShowCategory111Screen
 #define SetCategory111RightSoftkeyFunction 	g_pMtk->qy_SetCategory111RightSoftkeyFunction
 #define wgui_inputs_register_validation_func 	g_pMtk->qy_wgui_inputs_register_validation_func
+#define MtkSocketConnect 	g_pMtk->qy_MtkSocketConnect
 
 
 

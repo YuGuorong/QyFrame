@@ -18,3 +18,9 @@ QinYiAppTypes.h (inc):void FuncReinitQyHeap(void * buff, int len);
 QinYiAppAdapt.c (src):void QyReinitHeap(void)
 QinYiAppSrc.c (src):    	QyReinitHeap();
 QinYiAppTypes.h (inc):void QyReinitHeap(void);
+---- qy_soc_create Matches (2 in 2 files) ----
+QinYiAdpStruct.h (inc):	kal_int8 (*qy_soc_create)( kal_uint8 domain, 
+QinYiFnxDef.h (inc):#define soc_create 	g_pMtk->qy_soc_create
+---- soc_init_win32 Matches (2 in 1 files) ----
+QinYiProtocol.c (src):extern void soc_init_win32(void);
+QinYiProtocol.c (src):    soc_init_win32();

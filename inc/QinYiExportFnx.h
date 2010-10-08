@@ -66,9 +66,22 @@
 	FS_XDelete,\
 	FS_GetDrive,\
 	\
-	QySocketConnect,\
+	mmi_frm_set_protocol_event_handler,\
+	soc_create,\
+	soc_setsockopt,\
+	soc_getsockopt,\
+	soc_gethostbyname,\
+	soc_abort_dns_query,\
+	soc_bind,\
+	soc_listen,\
+	soc_accept,\
+	soc_connect,\
+	soc_sendto,\
+	\
 	soc_send,\
 	soc_recv,\
+	soc_recvfrom,\
+	soc_shutdown,\
 	soc_close,\
 	\
 	open_scan_engine,\
@@ -204,6 +217,7 @@
 	ShowCategory111Screen,\
 	SetCategory111RightSoftkeyFunction,\
 	wgui_inputs_register_validation_func,\
+	MtkSocketConnect,\
 	\
 	\
 	\

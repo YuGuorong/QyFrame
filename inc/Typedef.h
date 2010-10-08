@@ -1,6 +1,7 @@
 #ifndef QY_TYPEDEF_H
 #define QY_TYPEDEF_H
 #define QY_PIKE_PROJ 1
+#define MMI_ON_HARDWARE_P 1
 
 typedef unsigned char   U8;
 typedef signed char     S8;
@@ -51,6 +52,12 @@ typedef S32*					PS32;
 
 #define MMI_TRUE                                    (!0)
 #define MMI_FALSE                                   0
+
+typedef enum 
+{
+  KAL_FALSE,
+  KAL_TRUE
+} kal_bool;
 
 #endif /*QY_TYPEDEF_H*/
 

@@ -13,6 +13,11 @@
 
 #define CMD_PROBLEM       1004
 
+#define CMD_QUERYUPDATE   1100
+#define CMD_UPDATESW      1101
+#define CMD_QUERYUPDATE_REQ  2
+
+
 #define MAX_RDID_LEN       12
 #define DEF_ID_MAX_BUFF    32
 
@@ -84,6 +89,7 @@ typedef struct tag_qysetting
     U8        Host_ip[4];
     S32       Host_port;
     S32       AutoConnectTime;
+    S32       BinHost_port;
 }QY_SETTING_PROF;
 
 
@@ -220,5 +226,7 @@ void FuncInitQyHeap(void * buff, int len);
 //U8 SetDelScrnIDCallbackHandler(U16 ScrnID, HistoryDelCBPtr funcPtr)
 U16 GetCurScrnID(void);
 int DeleleTask(int ftype, int index);
+int QySocketConnect( U8 * pIp, int port, int(*fnxCb)(void*));
+
 
 #endif /*_QINYI_APPTYPES_H*/

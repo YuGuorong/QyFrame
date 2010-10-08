@@ -38,6 +38,7 @@ typedef struct tag_qy_adaptor
 	void (*qy_FuncQyFree)(void *ptr); 
 	
 	
+	
 	void (*qy_StopTimer)(U16 timerid); 
 	void (*qy_StartTimer)(U16 timerid, U32 delay, FuncPtr funcPtr); 
 	void (*qy_StartTimerEx)(U16 timerid, U32 delay, oslTimerFuncPtr funcPtr, void* arg); 
@@ -68,9 +69,54 @@ typedef struct tag_qy_adaptor
 	int (*qy_FS_XDelete)(const WCHAR * FullPath, UINT Flag, BYTE *RecursiveStack, const UINT StackSize); 
 	int (*qy_FS_GetDrive)(UINT Type, UINT Serial, UINT AltMask); 
 	
-	kal_int32 (*qy_QySocketConnect)(void); 
+	void (*qy_mmi_frm_set_protocol_event_handler)(U16 eventID, PsIntFuncPtr funcPtr, MMI_BOOL isMultiHandler); 
+	kal_int8 (*qy_soc_create)( kal_uint8 domain, 
+                            socket_type_enum  type,
+                            kal_uint8         protocol,
+                            module_type       mod_id,
+                            kal_uint32        nwk_account_id);
+	kal_int8 (*qy_soc_setsockopt)(kal_int8 s, 
+                            kal_uint32 option,
+                            void       *val,
+                            kal_uint8  val_size);
+	kal_int8 (*qy_soc_getsockopt)(kal_int8 s, 
+                            kal_uint32 option,
+                            void       *val,
+                            kal_uint8  val_size);
+	kal_int8 (*qy_soc_gethostbyname)(kal_bool is_blocking, 
+                            module_type     mod_id,
+                            kal_int32       request_id,
+                            const kal_char  *domain_name,
+                            kal_uint8       *addr,
+                            kal_uint8       *addr_len,
+                            kal_uint8       access_id,
+                            kal_uint32      nwk_account_id);
+	kal_int8 (*qy_soc_abort_dns_query)(kal_bool by_mod_id, 
+                             module_type  mod_id,
+                             kal_bool     by_request_id,
+                             kal_uint32   request_id,
+                             kal_bool     by_access_id,
+                             kal_uint8    access_id,
+                             kal_bool     by_nwk_account_id,
+                             kal_uint32   nwk_account_id);
+	kal_int8 (*qy_soc_bind)(kal_int8 s, sockaddr_struct *addr); 
+	kal_int8 (*qy_soc_listen)(kal_int8 s, kal_uint8 backlog); 
+	kal_int8 (*qy_soc_accept)(kal_int8 s, sockaddr_struct *addr); 
+	kal_int8 (*qy_soc_connect)(kal_int8 s, sockaddr_struct *addr); 
+	kal_int32 (*qy_soc_sendto)(kal_int8 s, 
+                            const void       *buf,
+                            kal_int32	     len,
+                            kal_uint8 	     flags,
+                            sockaddr_struct *addr);
+    
 	kal_int32 (*qy_soc_send)( kal_int8 s,const void *buf, kal_int32 len,kal_uint8 flags); 
 	kal_int32 (*qy_soc_recv)(kal_int8 s,void *buf, kal_int32 len,kal_uint8 flags); 
+	kal_int32 (*qy_soc_recvfrom)(kal_int8 s, 
+                            void            *buf,
+                            kal_int32       len,
+                            kal_uint8       flags,
+                            sockaddr_struct *fromaddr);
+	kal_int8 (*qy_soc_shutdown)(kal_int8 s, kal_uint8 how); 
 	kal_int8 (*qy_soc_close)(kal_int8 s); 
 	
 	void (*qy_open_scan_engine)(pfncScanDone pfnx_scan_done); 
@@ -276,19 +322,23 @@ typedef struct tag_qy_adaptor
             U8 *history_buffer);
 	void (*qy_SetCategory111RightSoftkeyFunction)(void (*f) (void), MMI_key_event_type k); 
 	void (*qy_wgui_inputs_register_validation_func)(void (*f) (U8 *, U8 *, S32)); 
+	int (*qy_MtkSocketConnect)( U8 * pIp, int port, int acount_id, int(*fnxCb)(void*, int)); 
 	
     //Gloabal variables here
     int Globalbase;    
     int IdleAppResBase;
     int MainMenuResBase;
-    const U16 * pIndexIconsImageList;
-    U8 *  pcurrentHighlightIndex;
+    int MsgSocIdStart;
     int ModMMI;
     int SrcStart;
     int SrcEnd;
     int TmIdStart;
     int TmIdEnd;
+    int SW_Ver;
+    kal_int8 *socket_id;
 
+    const U16 * pIndexIconsImageList;
+    U8 *  pcurrentHighlightIndex;
     void * gp_inline_items;
 
 }QY_ADAPTOR; 
