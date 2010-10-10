@@ -140,6 +140,10 @@
 	PowerAndEndKeyHandler,\
 	ClearKeyEvents,\
 	\
+	SetScanKeyHandler,\
+	GetScanKeyHandler,\
+	SetDefaultScanKeyHandlers,\
+	\
 	get_softkey_label,\
 	set_softkey_icon,\
 	get_softkey_icon,\

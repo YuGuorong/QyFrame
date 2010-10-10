@@ -1,18 +1,8 @@
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include "QinYiApp.h"
-#include "fs_errcode.h"
-#include "fs_type.h"
-#include "soc_sap.h"
-
-#ifdef WIN32
-#undef MMI_ON_HARDWARE_P
-#endif 
+#include "QinYiCommon.h"
 
 #define MAX_CMD_BUFF_LEN  1024
 
-int SocketConnect(void);
+
 void QyAppendCmdItem(U16 *strParam);
 
 
@@ -421,14 +411,16 @@ U16 * QureyErrorString(int errcode)
     
 }
 
-
 //U16 qy_str_login[] =  {L"00000062`1000`0100`01291.001`20100914055503`01291.001\t01`\n"};
 int QySendLoginCmd(U16 * user , U16 * pwd, void (*f)(int ret))
 {
     if( QyInitialComamnd(CMD_LOGIN,CMD_LOGIN_REQ,0) )
     {
+        U16 ver[8];
         QyAppendCmdItem(user);
         QyAppendParmItem(pwd);
+        kal_wsprintf(ver,"%000d",QY_APPLICATION_VERSION);
+        QyAppendParmItem(ver);
         QyWrapPackage();
         QySendPackage(f, 0);
         return 1;
@@ -777,6 +769,19 @@ int DeleleTask(int ftype, int index)
         FS_Seek(fsh, offset+4, FS_FILE_BEGIN);
         FS_Write(fsh, &flag, 2 ,&rd);
         FS_Close(fsh);
+
+        if(rd == 2 )
+        {
+            if( index != g_TaskDump->Totls )
+            {
+                int nleft = g_TaskDump->Totls-index-1; 
+                memmove(&g_TaskDump->TitlePtr[index],&g_TaskDump->TitlePtr[index+1], nleft * sizeof(U8 *));
+                memmove(&g_TaskDump->findex[index],  &g_TaskDump->findex[index+1],   nleft * sizeof(U8));
+                memmove(&g_TaskDump->offset[index],  &g_TaskDump->offset[index+1],   nleft * sizeof(U32));                            
+            }
+            g_TaskDump->Totls--;
+
+        }
         return (rd==2) ? QY_SUCCESS  : ERR_FILE_NOT_OPEN;        
     }    
     return ERR_FILE_NOT_OPEN;
@@ -1193,7 +1198,7 @@ int QySendQueryUpdateCmd( void (*f)(int ret), U16 * pver)
 void QureySwUpdateable(void)
 {
     U16 vers[8];
-    kal_wsprintf(vers, "%04d", VER_PROG);
+    kal_wsprintf(vers, "%04d", QY_APPLICATION_VERSION);
     QySendQueryUpdateCmd(QyOnQueryUpdateAck,vers);
     //QySendQueryUpdateCmd(QyOnQueryUpdateAck);
 }

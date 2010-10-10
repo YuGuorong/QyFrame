@@ -1,6 +1,10 @@
 #ifndef _QINYI_APPTYPES_H
 #define _QINYI_APPTYPES_H
 
+#define QINYI_PROG_VERSION      1
+#define QY_APPLICATION_VERSION    4
+
+
 #define CMD_LOGIN         1000
 #define CMD_LOGIN_REQ     1
 #define CMD_LOGIN_ACK     2

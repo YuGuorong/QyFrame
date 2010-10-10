@@ -1,9 +1,4 @@
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include "QinYiApp.h"
-#include "fs_errcode.h"
-#include "fs_type.h"
+#include "QinYiCommon.h"
 
  /*****************************************************************************/
 static S32 OpenQyStrDir(PS8 filepath)
@@ -124,10 +119,6 @@ void EnScanEngine( int bEnableScanSenser)
 }
 
 
-void OnSideKeyHandle()
-{
-}
-
 const QY_SETTING_PROF g_QyDefaultSetting = 
 {
     {L"01291.001",L""},
@@ -183,15 +174,6 @@ QY_SETTING_PROF * LoadQySetting(void)
     }
     return pSetting;
 }
-U8 g_QyHeapBuff[QY_HEAP_MEM_SIZE];
 
-    
-void QinYiAppInit(void)
-{
-    SetQyLoginAuthenStatus(UN_AUTHEN);
-    InitStorage();
-    //SetDefaultScanKeyHandlers();
-    //SetHiliteHandler(MENU_ID_QINYI_APP_START, MmiQinYiAppMainMenuHilit);
-}
 
 

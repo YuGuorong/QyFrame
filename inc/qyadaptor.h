@@ -53,6 +53,7 @@ typedef int (*PsIntFuncPtr)(void *);
 
 #define set_left_softkey_icon(ICON)  set_softkey_icon(ICON, MMI_LEFT_SOFTKEY)
 #define set_right_softkey_icon(ICON) set_softkey_icon(ICON, MMI_RIGHT_SOFTKEY)
+#define QINYI_PROG_VERSION          (g_pMtk->SW_Ver)
 
 
 #define UI_POPUP_NOTIFYDURATION_TIME            1000

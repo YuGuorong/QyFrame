@@ -176,6 +176,10 @@ typedef struct tag_qy_adaptor
 	void (*qy_PowerAndEndKeyHandler)(void); 
 	void (*qy_ClearKeyEvents)(void); 
 	
+	void (*qy_SetScanKeyHandler)(FuncPtr ScanKeyHandler); 
+	FuncPtr (*qy_GetScanKeyHandler)(void); 
+	void (*qy_SetDefaultScanKeyHandlers)(void); 
+	
 	
 	UI_string_type (*qy_get_softkey_label)(WGUI_SOFTKEY_ENUM key); 
 	void (*qy_set_softkey_icon)(PU8 i, WGUI_SOFTKEY_ENUM key); 
@@ -340,5 +344,4 @@ typedef struct tag_qy_adaptor
     const U16 * pIndexIconsImageList;
     U8 *  pcurrentHighlightIndex;
     void * gp_inline_items;
-
 }QY_ADAPTOR; 

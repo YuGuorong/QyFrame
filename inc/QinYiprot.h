@@ -188,6 +188,10 @@ extern "C" {
     void ClearKeyHandler(U16 keyCode, U16 keyType);
     void PowerAndEndKeyHandler(void);              
     void ClearKeyEvents(void);
+    
+    void SetScanKeyHandler(FuncPtr ScanKeyHandler);
+    FuncPtr GetScanKeyHandler(void);
+    void SetDefaultScanKeyHandlers(void);
 
     
     UI_string_type get_softkey_label(WGUI_SOFTKEY_ENUM key);
@@ -337,6 +341,7 @@ extern "C" {
     void wgui_inputs_register_validation_func(void (*f) (U8 *, U8 *, S32));
     int MtkSocketConnect( U8 * pIp, int port, int acount_id, int(*fnxCb)(void*, int));
 
+#ifdef QINYI_DECLARE_EXPORT_FOR_SCRIPT
     //Gloabal variables here
     int Globalbase;    
     int IdleAppResBase;
@@ -353,7 +358,7 @@ extern "C" {
     const U16 * pIndexIconsImageList;
     U8 *  pcurrentHighlightIndex;
     void * gp_inline_items;
-
+#endif /*QINYI_DECLARE_EXPORT_FOR_SCRIPT*/
 #ifdef __cplusplus
 }
 #endif

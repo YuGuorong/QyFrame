@@ -142,6 +142,10 @@ extern QY_ADAPTOR * g_pMtk;
 #define PowerAndEndKeyHandler 	g_pMtk->qy_PowerAndEndKeyHandler
 #define ClearKeyEvents 	g_pMtk->qy_ClearKeyEvents
 
+#define SetScanKeyHandler 	g_pMtk->qy_SetScanKeyHandler
+#define GetScanKeyHandler 	g_pMtk->qy_GetScanKeyHandler
+#define SetDefaultScanKeyHandlers 	g_pMtk->qy_SetDefaultScanKeyHandlers
+
 #define get_softkey_label 	g_pMtk->qy_get_softkey_label
 #define set_softkey_icon 	g_pMtk->qy_set_softkey_icon
 #define get_softkey_icon 	g_pMtk->qy_get_softkey_icon
