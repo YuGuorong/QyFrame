@@ -31,7 +31,7 @@ int QyAppendTime()
     g_pCmdCurPtr += 15;
     return 14;
 }
-
+ 
 int QyInitialComamnd(int cmd, int req, int maxlen)
 {
     ResetQyProtocol();
@@ -99,12 +99,12 @@ void QyWrapPackage()
 
 void QyPackageDone(int ret);
 int Qy_soc_socket_notify(void *inMsg, int Msg);
-
+int g_SocTimerRet = 0;
 void qy_soc_timeout(void)
 {
     StopTimer(SOCKET_TIMEOUT_TIMER);
     soc_close(g_qy_socket_id);
-    QyPackageDone(-1);
+    QyPackageDone(g_SocTimerRet);
 }
 
 int mtk_soc_socket_notify(void *inMsg);
@@ -113,7 +113,7 @@ int QySendPackage( void (*f)(int ret) , int bBinary )
      int ret = 0;
     if( g_SettingProf )
     {
-        int port = bBinary > 0 ? g_SettingProf->BinHost_port : g_SettingProf->Host_port;
+        int port = bBinary > 0 ? g_SettingProf->Host_port + 1 : g_SettingProf->Host_port;
         ret = MtkSocketConnect(g_SettingProf->Host_ip, port, 10, Qy_soc_socket_notify);
         if( ret  ) 
             g_QyCmdFinish = f;
@@ -139,7 +139,10 @@ int Qy_soc_socket_notify(void *inMsg, int msg)
 {
     app_soc_notify_ind_struct *soc_notify = (app_soc_notify_ind_struct*) inMsg;
 
-    kal_prompt_trace(MOD_MMI,"Qy_soc_socket_notify %d, %d", soc_notify->event_type,msg);
+	if( soc_notify ) 
+		kal_prompt_trace(MOD_MMI,"Qy_soc_socket_notify %d, %d", soc_notify->event_type,msg);
+	else
+		kal_prompt_trace(MOD_MMI,"Qy_soc_socket_notify %d", msg);
     
     switch (msg)
     {
@@ -149,6 +152,7 @@ int Qy_soc_socket_notify(void *inMsg, int msg)
     case SOC_READ:
         kal_prompt_trace(MOD_MMI,"SOC_READ");
         QyPackageDone(1);
+        g_SocTimerRet = 0;
         /*soc_recv(g_qy_socket_id, g_paBuffer, 256, 0);
         mmi_scan_display_popup((UI_string_type) g_paBuffer, MMI_EVENT_INFO);*/
         break;
@@ -168,8 +172,15 @@ int Qy_soc_socket_notify(void *inMsg, int msg)
     case SOC_CLOSE:
         kal_prompt_trace(MOD_MMI,"SOC_CLOSE %d", g_qy_socket_id);
         soc_close(g_qy_socket_id);
+        StopTimer(SOCKET_TIMEOUT_TIMER);
+        g_SocTimerRet = 0;
         QyPackageDone(0);
         break;
+	case SOC_WOULDBLOCK|SOC_EXT_MSG:
+        g_SocTimerRet = -1;
+		StartTimer(SOCKET_TIMEOUT_TIMER,20000,qy_soc_timeout);
+		break;
+
     }
     return 0;
 }
@@ -281,16 +292,14 @@ U16 * GetNextField(U16 * buff, int len)
 {
     U16 * ptr = (U16 *)buff;
     if( buff == NULL) return NULL;  
-    if( *ptr ) ptr++;
     
-    while(*ptr && *ptr != L'`')
+    while(*ptr )
     {
+		if( *ptr == L'\n' ) 
+			return NULL;
         ptr++;
     }
-    if( ptr == (U16 *)buff )
-        ptr = NULL;
-    if( *ptr == 0 ) ptr++;
-    return ptr;
+    return ++ptr;
 }
 
 U16 * GetFeild(void * buff, int len, int idx)
@@ -309,6 +318,22 @@ U16 * GetFeild(void * buff, int len, int idx)
     
 }
 
+U32 GetFieldInt(void * buff, S32 len, S32 idx, U32 * ret)
+{
+    U16 * pver = GetFeild(buff, 0, idx) ;
+    if( pver )
+        return mmi_ucs2toi((S8*)pver,(S32*)ret,NULL);
+    return 0;    
+}
+
+U32 GetFieldIntx(void * buff, S32 len, S32 idx, U32 * ret)
+{
+    U16 * pver = GetFeild(buff, 0, idx) ;
+    if( pver )
+        return mmi_ucs2tox((S8*)pver,(S32*)ret,NULL);
+    return 0;    
+}
+
 //TODO:
 int ParseAckCode(void * buff, int len)
 {
@@ -319,12 +344,13 @@ int ParseAckCode(void * buff, int len)
 int ParseAckPackage(int * pcmd, int * perr, U16 * pack, int len)
 {
     int fields = 1;
-    U16 * ptr_cmd = pack, * ptr_err;
+    U16 * ptr_cmd = pack, * ptr_err = NULL;
+	pack[len] = 0;
 
     
     while( *pack && (*pack != L'\n'))
     {
-        if( *pack == L'`' )
+        if( *pack == L'`' || *pack == L'\t')
         {
             *pack = L'\0';
             fields++;
@@ -467,7 +493,7 @@ int QyPrepareSignRecptCmd(U16 * SignName, int totals,QY_RDID * pIds, FuncCmdAck 
     17	家中无人               9. 家中无人
     16	其他                   10.其他*/
 
-const int g_problem_map[]= {14,3, 1, 5, 12, 6, 7, 15, 17, 16,11};
+const int g_problem_map[]= {16,14,3, 1, 5, 12, 6, 7, 15, 17, 16,11};
 
 int QyPrepareIssueCmd(PROBLEM_JOUNOR * pProblemJouner, int totals,QY_RDID * pIds, FuncCmdAck f)
 {
@@ -475,7 +501,7 @@ int QyPrepareIssueCmd(PROBLEM_JOUNOR * pProblemJouner, int totals,QY_RDID * pIds
     U16 Strrdid[MAX_RDID_LEN+2];
     U16 strProblemID[4];
     int idx;
-    mmi_ucs2tox((S8*)pProblemJouner->ProblemID, &idx,NULL);
+    mmi_ucs2toi((S8*)pProblemJouner->ProblemID, &idx,NULL);
     if( idx < 0 && idx >= sizeof(g_problem_map)/sizeof(int))
         return 0; 
     
@@ -1000,7 +1026,7 @@ int FindAsynTask(int fsh,QYF_NODE *node)
 const int g_cmdReqAck[] = {CMD_RECIVE, CMD_SIGN_RECTP, CMD_PROBLEM};
 void OnFishAsynSend(int ret)
 {
-    int fsh;
+    int fsh = 0;
     if( ret > 0 )
     {
         int cmd, err,field;
@@ -1033,13 +1059,13 @@ void OnFishAsynSend(int ret)
     else
         TerminalQyAshSendThread();
 }
-
+ 
 
 int AsynSendTask(QYFILE_TYPE ftype)
 {
-    int fsh, ret, index;
+    int fsh, ret = 0, index;
     U16 fname[32]; 
-    for( index = (int)'A'; index<(int)'Z';index++)
+    for( index = (int)'A'; ret == 0 && index<(int)'Z';index++)
     {
         kal_wsprintf(fname, "%w_%c.dat",GetQyFileName(ftype),index);
         fsh = OpenQyFile(QY_USER, fname, FS_READ_ONLY);
@@ -1071,7 +1097,7 @@ int AsynSendTask(QYFILE_TYPE ftype)
                         SetQyAsySendThreadStatus(QYTSK_SENDING|GetAsynchoThreadStatus());
                         SendTask(g_pAsynTask, 0, OnFishAsynSend);                        
                     }                    
-                    return ret;
+                    ret = 1;
                 }
             }
             else
@@ -1079,7 +1105,7 @@ int AsynSendTask(QYFILE_TYPE ftype)
         }
         FS_Close(fsh);
     }
-    return 0;
+    return ret;
 }
 
 void QyAsySendThreadEntry(void)
@@ -1102,43 +1128,158 @@ void QyAsySendThreadEntry(void)
 }
 
 
-#define TEMP_BUFF_SIZE (31580 )
-U8 g_temp[TEMP_BUFF_SIZE+64];
+#define TEMP_BUFF_SIZE (0x10000*4 )
+/*
+升级包信息头
+ 
+升级包文件长度 UNC-2编码，8个字符   分隔符 \0x00\0x09
+升级包RAM大小 UNC-2编码，8个字符    分隔符 \0x00\0x09
+是否压缩 没有压缩为NONE，压缩则为压缩算法名，长度可变，最多16字符 分隔符  \0x00\0x09
+程序说明 该升级包升级信息，长度可变，最大200字符
+
+升级包文件长度	UNC-2编码，8个字符
+升级包RAM大小	UNC-2编码，8个字符
+校验码	8个字符
+依赖版本号	Unicode编码,固定长度,4个字符
+是否压缩	没有压缩为NONE，压缩则为压缩算法名，长度可变，最多16字符
+程序说明	该升级包升级信息，长度可变，最大200字符
+
+*/
+
+typedef struct tag_UpdatePakageInfo
+{
+    U32 fsize;
+    U32 ramsize;
+    U32 chksum;
+    U32 CompessType;
+    U32 fwrite;
+    U16 bPopup;
+    U16 txt[200];
+    U8 * pbuf;
+}UPDATEPAKAGEINFO;
+UPDATEPAKAGEINFO *  g_pUpgradeInfo = NULL;
+U16 g_szExeBinF[] = {L"AppsEntry.bin"};
+U16 g_szDownBinF[] = {L"AppsEntryx.bin"};
+U16 g_szDecBinF[] = {L"AppsEntryD.bin"};
+
+void FreeQyUpdateRes(void)
+{
+    if( g_pUpgradeInfo && g_pUpgradeInfo->bPopup)
+    {
+        OnUiUpdateEnd(g_pUpgradeInfo->bPopup);
+        g_pUpgradeInfo->bPopup = 0;      
+        QyFree(g_pUpgradeInfo->pbuf);
+        QyFree(g_pUpgradeInfo);
+        kal_prompt_trace(MOD_MMI, "Upgrade resource free");
+        g_pUpgradeInfo = NULL;
+    }
+   
+}
 void QyOnUpdateAck(int ret)
 {
     if( ret > 0 )
     {  
-        int fsh = 0;
-        int ntotal = 0;
+        //int fsh = 0;
+        //int ntotal = 0;
         int ngot;
-        do{
+        U8 * g_temp = &g_pUpgradeInfo->pbuf[g_pUpgradeInfo->fwrite];
+        
+        {
+            g_temp = &g_pUpgradeInfo->pbuf[g_pUpgradeInfo->fwrite];
             ngot = QyGetAckData(g_temp,  TEMP_BUFF_SIZE );
             
             if( ngot > 0 )
             {
+                /*
                 UINT wt;
-                ntotal +=  ngot;
+                ntotal +=  ngot; 
 				if (fsh <= 0 )
-					fsh = OpenQyFile(QY_PROG, L"AppEntryx.bin", FS_READ_WRITE);
+					fsh = OpenQyFile(QY_PROG, g_szDownBinF, FS_READ_WRITE);
                 FS_Seek(fsh, 0, FS_FILE_END);
                 FS_Write(fsh, &g_temp, ngot ,&wt);
-                FS_Commit(fsh);
+                FS_Commit(fsh);*/
+
+                if( g_pUpgradeInfo )
+                    g_pUpgradeInfo->fwrite += ngot;//wt;
             }
-        }while( ngot > 0  );
-        FS_Close(fsh);
-        StartTimer(SOCKET_TIMEOUT_TIMER,150000,qy_soc_timeout);        
+        }
+        
+
+        kal_prompt_trace(MOD_MMI, "Read package, %x",g_pUpgradeInfo->fwrite);
+
+        //FS_Close(fsh);
+        //QyFree(g_temp);
+        StartTimer(SOCKET_TIMEOUT_TIMER,150000,qy_soc_timeout);    
+      //  if( g_pUpgradeInfo->fsize < g_pUpgradeInfo->fwrite  )
+            return;
+
     }
+    else if( ret == 0 )
+    {
+        int fsh = OpenQyFile(QY_PROG, g_szDownBinF, FS_CREATE_ALWAYS|FS_READ_WRITE);
+        {
+            UINT wt;
+            U8  * pbuf = g_pUpgradeInfo->pbuf;
+            FS_Write(fsh, pbuf,g_pUpgradeInfo->fwrite,&wt);
+            kal_prompt_trace(MOD_MMI, "write file, %x,%x;[%x]",g_pUpgradeInfo->fwrite,wt, g_pUpgradeInfo->fsize);
+            kal_prompt_trace(MOD_MMI, "data %x,%x,%x,%x", pbuf[0],pbuf[1],pbuf[2],pbuf[3]);
+            FS_Commit(fsh);
+            
+            FS_Close(fsh);          
+        }
+        if( g_pUpgradeInfo && g_pUpgradeInfo->CompessType == 1)
+        {
+            int fsh = OpenQyFile(QY_PROG, g_szDownBinF, FS_READ_WRITE);
+            if( fsh > 0 )
+            {
+                UINT wd;
+                char * buff = QyMalloc(TEMP_BUFF_SIZE );
+                char * pout = QyMalloc(TEMP_BUFF_SIZE );
+                int wlen = Decode(fsh, buff,TEMP_BUFF_SIZE,pout);
+                FS_Close(fsh);
+                
+                fsh = OpenQyFile(QY_PROG, g_szDecBinF,  FS_CREATE_ALWAYS|FS_READ_WRITE);
+                if( fsh )
+                    FS_Write(fsh, pout, wlen, &wd);
+                FS_Close(fsh);
+                
+                if( wd == (UINT)wlen ) // && VerifyOK)
+                {
+                    U16 dstf[64], srcf[64];
+                    GetQyPathFile(dstf,QY_PROG, g_szExeBinF);
+                    GetQyPathFile(srcf,QY_PROG, g_szDecBinF);
+                    FS_Delete(dstf);
+                    FS_Rename(srcf, dstf);
+                }
+                
+                QyFree(buff);
+				QyFree(pout);
+            }
+        }
+        else
+        {
+            //if(verifyOK)
+            U16 dstf[64], srcf[64];
+            GetQyPathFile(dstf,QY_PROG, g_szExeBinF);
+            GetQyPathFile(srcf,QY_PROG, g_szDownBinF);
+            FS_Delete(dstf);
+            FS_Rename(srcf,dstf); 
+        }
+        
+    }
+    //StartTimer(SOCKET_TIMEOUT_TIMER,500,FreeQyUpdateRes);    
+    FreeQyUpdateRes();
+    
 }
 
 
 int QySendUpdateSwCmd( void (*f)(int ret), U16 * pver)
 {
-    g_SettingProf->Host_port = 9989;
     if( QyInitialComamnd(CMD_UPDATESW,CMD_QUERYUPDATE_REQ,0) )
     {
 		QyAppendCmdItem(pver);
         QyWrapPackage();
-        QySendPackage(f, 0);
+        QySendPackage(f, 1);
         return 1;
     }
     return 0;
@@ -1146,31 +1287,71 @@ int QySendUpdateSwCmd( void (*f)(int ret), U16 * pver)
 
 int QyBeginUpdatePackage(void (*f)(int ), U16 * pver)
 {
-    int fsh = OpenQyFile(QY_PROG, L"AppEntryx.bin", FS_CREATE_ALWAYS|FS_READ_WRITE);
-    FS_Close(fsh);
     StopTimer(SOCKET_TIMEOUT_TIMER);
     soc_close(g_qy_socket_id);        
     QySendUpdateSwCmd(f, pver);
+    g_pUpgradeInfo->bPopup = OnUiUpdateStart();
     return 1;
 }
 
 #define VER_PROG  1
 
+
+const U16 g_CompressCode[][5] = { {L"NONE"},{L"LZSS"}};
+
+
+
 void QyOnQueryUpdateAck(int ret)
 {
     if( ret > 0 )
     {
-        int cmd, err,field;
+        int cmd, err,field, bCompress;
         void * hack = GetAckHandle(&cmd, &err,&field);
 
+        bCompress = 0;
         if( cmd == CMD_QUERYUPDATE  )
         {
-            int ver = 0x7ffff;
-            U16 * pver = GetFeild(hack, 0, 2) ;
-            mmi_ucs2toi((S8*)pver,&ver,NULL);
-            if ( ver > VER_PROG )
+            int ver = -1  ;
+            U16 * pver = GetFeild(hack, 0, 7) ;
+            bCompress = -1;
+			if( pver )
+			{
+				int i;
+				for(i=0 ;i<sizeof(g_CompressCode)/(sizeof(U16)*5); i++)
+				{
+					if( memcmp(pver, g_CompressCode[i], 5 * sizeof(U16)) == 0)
+					{
+                        bCompress = i;
+                        break;
+					}
+                    
+				}
+            }
+
+            if( bCompress == -1 )
+                return ;
+
+            GetFieldInt(hack, 0, 2, (U32 *)&ver) ;
+            if ( ver != -1 && ver > VER_PROG )
             {
-                QyBeginUpdatePackage(QyOnUpdateAck,pver);
+                if( g_pUpgradeInfo == NULL ) 
+                {
+                    g_pUpgradeInfo = (UPDATEPAKAGEINFO*)QyMalloc(sizeof(UPDATEPAKAGEINFO)) ;
+                    
+                }
+                if( g_pUpgradeInfo )
+                {
+                    memset( g_pUpgradeInfo, 0, sizeof(UPDATEPAKAGEINFO) );
+                    g_pUpgradeInfo->CompessType = bCompress; 
+                    GetFieldIntx(hack, 0, 3, &g_pUpgradeInfo->fsize) ;
+                    GetFieldIntx(hack, 0, 4, &g_pUpgradeInfo->ramsize) ;
+                    GetFieldIntx(hack, 0, 5, &g_pUpgradeInfo->chksum) ;
+                    g_pUpgradeInfo->pbuf = (U8 *)QyMalloc(g_pUpgradeInfo->fsize+1024);
+                    kal_prompt_trace(MOD_MMI, "Upgrade resource free, %x",g_pUpgradeInfo->fsize );
+                    pver = GetFeild(hack, 0, 2) ;
+                    QyBeginUpdatePackage(QyOnUpdateAck,pver);
+                }
+                
             }
         }
         else
@@ -1184,7 +1365,6 @@ void QyOnQueryUpdateAck(int ret)
 
 int QySendQueryUpdateCmd( void (*f)(int ret), U16 * pver)
 {
-    g_SettingProf->Host_port = 9988;
     if( QyInitialComamnd(CMD_QUERYUPDATE,CMD_QUERYUPDATE_REQ,0) )
     {
 		QyAppendCmdItem(pver);

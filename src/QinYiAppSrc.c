@@ -1,6 +1,6 @@
 #include "QinYiCommon.h"
 
-#define LOGIN_MODULE
+#define LOGIN_MODULE 
 #define SIGNRECPT_MODULE
 
 #define ADD_TEXT_ITEM(text)     {SetInlineItemActivation(&(wgui_inline_items[idx]), INLINE_ITEM_ACTIVATE_WITHOUT_KEY_EVENT, 0);\
@@ -88,7 +88,7 @@ static void QinYiSetScanHandle(pfncScanDone pfnx_scan_done)
         SetScanKeyHandler( OnScanKeyTrigle );
     	SetDefaultScanKeyHandlers();
     }
-}
+} 
 
 static void ExitQinYListWindow(void)
 {
@@ -325,6 +325,29 @@ static U8 g_curListWndSel = 0;
 
 
 //Function -------------------------------------------------------------------
+int OnUiUpdateStart(void)
+{
+    int i;
+    DisplayPopup((PU8)((U16*)"\x47\x53\xA7\x7E\xB\x7A\x8F\x5E\x2E\x0\x2E\x0\x2E\x0\x0\x0") /*L"升级程序..."*/, QY_RES(IMG_GLOBAL_PROGRESS), 1,(U32) -1, 0);
+
+    for( i=KEY_0; i<KEY_EXTRA_B;i++)
+    {
+        SetKeyHandler(NULL, i, KEY_EVENT_DOWN);
+        SetKeyHandler(NULL, i, KEY_EVENT_UP);  
+    }
+
+    return GetCurrScrnId();
+}
+
+void OnUiUpdateEnd(U16 srcid)
+{
+    U16 sid = GetCurrScrnId();
+    if(sid ==  srcid)
+    {
+        ClearAllKeyHandler();
+        GoBackHistory();
+    }
+}
 
 void SetQyLoginAuthenStatus(AUTHEN_TYPE  QyLogStatus)
 {
@@ -354,9 +377,9 @@ void QyOnLoginAck(int ret)
                 GoBackHistory();
                 GoBackHistory();
                 gdi_layer_unlock_frame_buffer();    
-                
+                 
                 QinYiAppEntry();
-                
+                kal_prompt_trace(MOD_MMI,"Login statu (%d)", err );   
                 if( err == 2 )
                     QureySwUpdateable();
                 else
@@ -366,6 +389,7 @@ void QyOnLoginAck(int ret)
             {
                 DisplayPopup((PU8)QureyErrorString(err), QY_RES(IMG_GLOBAL_ERROR), 0, UI_POPUP_NOTIFYDURATION_TIME, 0);
             }
+            return;
         }
         else
         {
@@ -374,6 +398,14 @@ void QyOnLoginAck(int ret)
         
             
     }
+    else if( ret == -1 )
+    {
+        gdi_layer_lock_frame_buffer();                
+        GoBackHistory();
+        gdi_layer_unlock_frame_buffer();    
+        DisplayPopup((PU8)(((U16*)"\x1A\x90\xAF\x8B\x31\x59\x25\x8D\x0\x0") /*L"通讯失败"*/), QY_RES(IMG_GLOBAL_ERROR), 0, UI_POPUP_NOTIFYDURATION_TIME, 0);
+    }
+        
 }
 
 void QY_LoginCheck(void)
@@ -530,7 +562,23 @@ U16 g_SignRecptCpat[3+4];
 U16 g_RfBarCode[MAX_RDID_LEN+2];
 TASK_HEADER  * g_pSignRecptTask  = NULL;
 //Implemetion -------------------------------------------------------------------
-static U8 ExitQinYnSignRecpt(void * p)
+int IsValidCode()
+{
+#if 1
+    return 1;
+#else    
+    int len  = kal_wstrlen(g_RfBarCode);
+    if( len == 10 || len == 12 || len == 13 )
+        return 1;
+    return 0;
+#endif 
+    
+}
+
+
+
+
+static U8 ExitQinYnSignRecpt(void * p) 
 {
     if( g_pSignRecptTask )
     {
@@ -564,8 +612,7 @@ static void QySignRecptCheck(void)
 {
      if( currentHighlightIndex == QY_BAR_CODE )
      {
-        int len  = kal_wstrlen(g_RfBarCode);
-        if( len == 10 || len == 12 || len ==13  )
+        if( IsValidCode()  )
         {
             kal_wsprintf(g_SignRecptCpat,"%w:%d",((U16*)"\x6B\x62\xCF\x63\x0\x0") /*L"扫描"*/, g_pSignRecptTask->totals);
             RedrawCategory57Screen();//dm_redraw_category_screen();
@@ -591,9 +638,8 @@ static void QySignReccpExit(void)
 
 static int  AddSignBarCode(void)
 {
-    int len, ret = QY_ERROR;
-    len  = kal_wstrlen(g_RfBarCode);
-    if( len == 10 || len == 12 || len == 13  )
+    int ret = QY_ERROR;
+    if( IsValidCode()  )
     {
         ret = AppendRdId(g_pSignRecptTask, g_RfBarCode);
         kal_wsprintf(g_SignRecptCpat,"%w:%d",((U16*)"\x6B\x62\xCF\x63\x0\x0") /*L"扫描"*/, g_pSignRecptTask->totals);
@@ -801,8 +847,7 @@ U8 g_ProblemTextList[][QY_SIZE_PRBLEM_LIST_MAX] = {
 ,{("\x37\x0\x2E\x0\x34\x78\x5F\x63\xF6\x4E\x0\x0") /*L"7.破损件"*/}
 ,{("\x38\x0\x2E\x0\xA2\x5B\x37\x62\x81\x89\x42\x6C\xCD\x91\xB0\x65\x3E\x6D\xD1\x53\x0\x0") /*L"8.客户要求重新派发"*/}
 ,{("\x39\x0\x2E\x0\xB6\x5B\x2D\x4E\xE0\x65\xBA\x4E\x0\x0") /*L"9.家中无人"*/}
-,{("\x31\x0\x30\x0\x68\x54\x0\x4E\x3E\x6D\x1\x90\x0\x0") /*L"10周一派送"*/}
-,{("\x31\x0\x31\x0\x76\x51\xD6\x4E\x0\x0") /*L"11其他"*/}
+,{("\x31\x0\x30\x0\x76\x51\xD6\x4E\x0\x0") /*L"10其他"*/}
 };
 
 extern const int g_cmdReqAck[];
@@ -1085,9 +1130,8 @@ void OnOkkeyProblemWind(void)
 
 static int AddProblemBarCode(void)
 {
-    int ret =QY_ERROR;
-    int len  = kal_wstrlen(g_RfBarCode);
-    if( len == 10 || len == 12 || len == 13 )
+    int ret =QY_ERROR;    
+    if( IsValidCode() )
     {
         ret = AppendRdId(g_pProblemTask, g_RfBarCode);
         kal_wsprintf(g_SignRecptCpat,"%w:%d",((U16*)"\x6B\x62\xCF\x63\x0\x0") /*L"扫描"*/, g_pProblemTask->totals);
@@ -1217,6 +1261,7 @@ void QyPeoblemListEntry(void)
     {
         ADD_TEXT_ITEM((U16*)(g_ProblemTextList[i]));
     }
+    ADD_CAPTION_ITEM( (((U16*)"\xEE\x95\x98\x98\xF6\x4E\x9F\x53\xE0\x56\x0\x0") /*L"问题件原因"*/));
     ADD_EDIT_ITEM(g_pOtherProblem,100,IMM_INPUT_TYPE_SENTENCE);    
      
     if (inputBuffer != NULL)
@@ -1263,7 +1308,14 @@ void QyEntryProblemApp(void)
 
 
 ///////////////////////////////////////////////////////////////////////////////////////List end ////////
-U16 g_qy_display_info_str[128];
+U16 * g_qy_display_info_str;
+U8 ExitMsgTxtWnd(void *msg)
+{
+    if( g_qy_display_info_str)
+        QyFree(g_qy_display_info_str);
+    g_qy_display_info_str = NULL;
+    return 0;
+}
 void test_show_message(void)
 {
     /*----------------------------------------------------------------*/
@@ -1293,6 +1345,7 @@ void test_show_message(void)
 
     SetRightSoftkeyFunction(GoBackHistory, KEY_EVENT_UP);
     /* SetKeyHandler(mmi_brw_display_info_go_back_history, KEY_LEFT_ARROW, KEY_EVENT_DOWN); */
+    SetDelScrnIDCallbackHandler(SCR_QINYI_APP_MAX-5, ExitQinYnProblem );
 
 }
 
@@ -1313,10 +1366,10 @@ void TestListHilit(int nsel)
 int TestListFill(int * pdef)
 {
     int idx = 0;
-    AddListItem(idx++, L"管理员密码",0 ,-1);
+    AddListItem(idx++, ((U16*)"\xA1\x7B\x6\x74\x58\x54\xC6\x5B\x1\x78\x0\x0") /*L"管理员密码"*/,0 ,-1);
     AddListItem(idx++, g_TstKeyPwd, QY_PSWD_MAX_LEN, IMM_INPUT_TYPE_NUMERIC_PASSWORD);
     AddListFullEditItem(idx++,L"Full", g_TestFullEdit, QY_PSWD_MAX_LEN ,IMM_INPUT_TYPE_SENTENCE, NULL);
-    AddListItem(idx++, L"完成",0 ,-2);
+    AddListItem(idx++, ((U16*)"\x8C\x5B\x10\x62\x0\x0") /*L"完成"*/,0 ,-2);
     return idx;
 
 }
@@ -1342,8 +1395,8 @@ U8  g_strMainMenuTbl[][6] =
     ,{("\xBE\x8B\x6E\x7F\x0") /*L"设置"*/} 
     ,{("\x73\x51\x8E\x4E\x0") /*L"关于"*/}     
 } ;
-#define MAX_MAIN_MENU_ITEMS  4
-U8 * g_strMainMenu[MAX_MAIN_MENU_ITEMS];
+#define QYMAX_MENU_MAIN_ITEMS  4
+U8 * g_strMainMenu[QYMAX_MENU_MAIN_ITEMS];
 
 
 U8  g_strMainEntryTbl[][8] =
@@ -1354,8 +1407,8 @@ U8  g_strMainEntryTbl[][8] =
     ,{("\xE5\x67\xE2\x8B\x0") /*L"查询"*/}
     ,{("\x1A\x90\xE5\x77\x0") /*L"通知(0)"*/}    
 } ;
-#define MAX_MENU_MAIN_ENTYR_ITEM  5
-U8 * g_strMainEntry[MAX_MENU_MAIN_ENTYR_ITEM];
+#define QYMAX_MENU_MAIN_ENTYR_ITEM  5
+U8 * g_strMainEntry[QYMAX_MENU_MAIN_ENTYR_ITEM];
 
 
 U8  g_titleRecpt[] = {"\x36\x65\xF6\x4E\x0\x0" /*L"收件"*/ };
@@ -1367,8 +1420,8 @@ U8   g_strReceptionTbl[][10] =
     ,{("\x4B\x62\xA8\x52\x36\x65\xF6\x4E\x0") /*L"手动收件"*/}
     ,{("\x49\x7B\x85\x5F\xD1\x53\x01\x90\x0") /*L"等待发送"*/}    
 } ;
-#define MAX_MENU_RECPT_ITEM  5
-U8*   g_strReception[MAX_MENU_MAIN_ENTYR_ITEM];
+#define QYMAX_MENU_RECPT_ITEM  5
+U8*   g_strReception[QYMAX_MENU_MAIN_ENTYR_ITEM];
 
 
 
@@ -1378,8 +1431,8 @@ U8   g_strSingReceptTbl[][10] =
      {("\x7E\x7B\x36\x65\x0\x0") /*L"签收"*/}
     ,{("\x49\x7B\x85\x5F\xD1\x53\x1\x90\x0") /*L"等待发送"*/}
 };
-#define MAX_MENU_SIGNRECPT_ITEM  2
-U8*   g_strSingRecept[MAX_MENU_SIGNRECPT_ITEM];
+#define QYMAX_MENU_SIGNRECPT_ITEM  2
+U8*   g_strSingRecept[QYMAX_MENU_SIGNRECPT_ITEM];
 
 
 
@@ -1389,8 +1442,8 @@ U8   g_strProblemListTbl[][10] =
      {("\xEE\x95\x98\x98\xF6\x4E\x0\x0") /*L"问题件"*/}
     ,{("\x49\x7B\x85\x5F\xD1\x53\x1\x90\x0") /*L"等待发送"*/}    
 };
-#define MAX_MENU_PROBLEM_ITEM  2
-U8 * g_strProblemList[MAX_MENU_PROBLEM_ITEM];
+#define QYMAX_MENU_PROBLEM_ITEM  2
+U8 * g_strProblemList[QYMAX_MENU_PROBLEM_ITEM];
 
 
 
@@ -1402,8 +1455,8 @@ U8   g_strOptReSendListTbl[][10] =
     ,{("\xCD\x91\xD1\x53\x0") /*L"重发"*/}    
     ,{("\x68\x51\xE8\x90\xCD\x91\xD1\x53") /*L"全部重发"*/}    
 };
-#define MAX_MENU_OPT_SEND_ITEM  3
-U8 * g_strOptReSendList[MAX_MENU_OPT_SEND_ITEM] ;
+#define QYMAX_MENU_OPT_SEND_ITEM  3
+U8 * g_strOptReSendList[QYMAX_MENU_OPT_SEND_ITEM] ;
 
 
 U8   g_strQueryTbl[][6] =
@@ -1412,8 +1465,8 @@ U8   g_strQueryTbl[][6] =
     ,{("\xA2\x8B\x55\x53\x0") /*L"订单"*/}
     ,{("\x2C\x67\x30\x57\x0") /*L"本地"*/}    
 };
-#define MAX_MENU_QUERY_ITEM  3
-U8 * g_strQuery[MAX_MENU_QUERY_ITEM] ;
+#define QYMAX_MENU_QUERY_ITEM  3
+U8 * g_strQuery[QYMAX_MENU_QUERY_ITEM] ;
 
 
 int g_qinyi_app_menu_sel =0;
@@ -1584,8 +1637,7 @@ void QinYiAppEntry()
     ShowQinYiMenu(NULL,g_strMainEntry,NULL,sizeof(g_strMainEntry)/sizeof(U8 * ),OnQinYiSelMainEntry, NULL);
 }
 
-extern void LoadQyFlexCode(void);
-extern void QyPikeInitialize(void);
+U32 CalcLocal(void);
 int OnQinYiSelMainMenu(int qinyi_app_menu_sel)
 {
     switch(qinyi_app_menu_sel)
@@ -1609,19 +1661,25 @@ int OnQinYiSelMainMenu(int qinyi_app_menu_sel)
         QySettingApp();//mmi_scan_display_popup((UI_string_type)L"Comming soon!", MMI_EVENT_INFO);
         break;
     case 3:
-        kal_wsprintf(g_qy_display_info_str, "%w\n\n%w %d\n%w %d\n\n%s\n%s",
+        if( g_qy_display_info_str)
+            QyFree(g_qy_display_info_str);
+        g_qy_display_info_str = (U16*)QyMalloc(128*2);
+        kal_wsprintf(g_qy_display_info_str, "%w\n\n%w %d\n%w %d\n\n%s\n%s,\n%w: %x",
             ((U16*)"\xE4\x52\x81\x86\x2F\x65\x1\x63\x6B\x62\xCF\x63\xC8\x7E\xEF\x7A\x0\x0") /*L"勤蚁支持扫描终端"*/,
-            L"主机软件版本:   ",
+            ((U16*)"\x3B\x4E\x3A\x67\x6F\x8F\xF6\x4E\x48\x72\x2C\x67\x3A\x0\x20\x0\x20\x0\x20\x0\x0\x0") /*L"主机软件版本:   "*/,
             QINYI_PROG_VERSION,            
             ((U16*)"\x47\x53\xA7\x7E\x5\x53\x48\x72\x2C\x67\x3A\x0\x20\x0\x20\x0\x20\x0\x0\x0") /*L"升级包版本:   "*/,
             QY_APPLICATION_VERSION  ,
-            __DATE__, __TIME__);
+            __DATE__, __TIME__,
+            ((U16*)"\x21\x68\x8C\x9A\x8C\x54\x0\x0") /*L"校验和"*/,
+            CalcLocal()
+);
 
         test_show_message();
         break;
     default:
         break;
-    }        
+    }         
 	return 0;
 }
 
@@ -1629,10 +1687,10 @@ int OnQinYiSelMainMenu(int qinyi_app_menu_sel)
 int QySaveUserAndPwd(USER_INFO  * puserinfo)
 {
     SaveQySettingProfile(g_SettingProf);
-    return 0;
+    return 0; 
 }
 
-
+ 
 int LoadUserAndPwd(void)
 {
     if( g_SettingProf )
@@ -1665,25 +1723,61 @@ int QyCheckPassword()
 }
 
 
+U16 g_sBtFile[]= {L"C:\\Received\\AppsEntry.bin"};
+
+int LoadBtFile(void)
+{
+    int fsh  = FS_Open(g_sBtFile,FS_READ_ONLY);
+    if( fsh >0 )
+    {
+        U32 rd, flen;  
+        U8 * buff ;
+
+        FS_GetFileSize(fsh, &flen);
+        buff = (U8*)QyMalloc(flen);
+        FS_Read(fsh, buff, flen, &rd);
+        FS_Close(fsh);
+        fsh = OpenQyFile(QY_PROG, L"AppsEntry.bin", FS_READ_WRITE|FS_CREATE_ALWAYS);
+        if(fsh)
+        {
+            flen = 0;  
+            FS_Write(fsh, buff,rd, &flen);
+            FS_Close(fsh);
+            if( rd == flen )
+                FS_Delete(g_sBtFile);
+        }
+    }
+    return 0;    
+}
+
+void InitMenuStr(void)
+{
+    InitStrTble(g_strMainMenu, QYMAX_MENU_MAIN_ITEMS);
+    InitStrTble(g_strMainEntry,QYMAX_MENU_MAIN_ENTYR_ITEM);
+    InitStrTble(g_strReception,QYMAX_MENU_MAIN_ENTYR_ITEM);
+    InitStrTble(g_strSingRecept,QYMAX_MENU_SIGNRECPT_ITEM);
+    InitStrTble(g_strOptReSendList,QYMAX_MENU_OPT_SEND_ITEM);
+    InitStrTble(g_strQuery,QYMAX_MENU_QUERY_ITEM);
+    InitStrTble(g_strProblemList,QYMAX_MENU_PROBLEM_ITEM);
+
+}
+
 void QinYiAppMain(void)
 {           
     kal_prompt_trace(MOD_MMI," Dll Entry");  
 
     SetKeyHandler(NULL, KEY_EXTRA_1,   KEY_EVENT_UP);
     SetKeyHandler(NULL, KEY_QUICK_ACS, KEY_EVENT_UP);  
-    
 
-    g_SettingProf = LoadQySetting();
+#if  0 //BT_DEBUG
+    if( LoadBtFile() )
+        return;
+#endif    
+
+    g_SettingProf = LoadQySetting(); 
+    InitMenuStr();
     
-    InitStrTble(g_strMainMenu, MAX_MAIN_MENU_ITEMS);
-    InitStrTble(g_strMainEntry,MAX_MENU_MAIN_ENTYR_ITEM);
-    InitStrTble(g_strReception,MAX_MENU_MAIN_ENTYR_ITEM);
-    InitStrTble(g_strSingRecept,MAX_MENU_SIGNRECPT_ITEM);
-    InitStrTble(g_strOptReSendList,MAX_MENU_OPT_SEND_ITEM);
-    InitStrTble(g_strQuery,MAX_MENU_QUERY_ITEM);
-    InitStrTble(g_strProblemList,MAX_MENU_PROBLEM_ITEM);
-    
-    ShowQinYiMenu(NULL,g_strMainMenu,NULL,MAX_MAIN_MENU_ITEMS,OnQinYiSelMainMenu, NULL);
+    ShowQinYiMenu(NULL,g_strMainMenu,NULL,QYMAX_MENU_MAIN_ITEMS,OnQinYiSelMainMenu, NULL);
 }
 
  /*****************************************************************************/

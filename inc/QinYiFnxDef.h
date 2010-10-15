@@ -68,6 +68,12 @@ extern QY_ADAPTOR * g_pMtk;
 #define FS_XDelete 	g_pMtk->qy_FS_XDelete
 #define FS_GetDrive 	g_pMtk->qy_FS_GetDrive
 
+#define WriteRecord 	g_pMtk->qy_WriteRecord
+#define ReadRecord 	g_pMtk->qy_ReadRecord
+#define ReadMultiRecord 	g_pMtk->qy_ReadMultiRecord
+#define WriteValue 	g_pMtk->qy_WriteValue
+#define ReadValue 	g_pMtk->qy_ReadValue
+
 #define mmi_frm_set_protocol_event_handler 	g_pMtk->qy_mmi_frm_set_protocol_event_handler
 #define soc_create 	g_pMtk->qy_soc_create
 #define soc_setsockopt 	g_pMtk->qy_soc_setsockopt
@@ -122,7 +128,13 @@ extern QY_ADAPTOR * g_pMtk;
 #define GetCurrNInputBuffer 	g_pMtk->qy_GetCurrNInputBuffer
 #define SetDelScrnIDCallbackHandler 	g_pMtk->qy_SetDelScrnIDCallbackHandler
 #define ClearDelScrnIDCallbackHandler 	g_pMtk->qy_ClearDelScrnIDCallbackHandler
+#define DeleteBetweenScreen 	g_pMtk->qy_DeleteBetweenScreen
 
+#define GetPreviousScrnIdOf 	g_pMtk->qy_GetPreviousScrnIdOf
+#define GetNextScrnIdOf 	g_pMtk->qy_GetNextScrnIdOf
+#define GetCurrScrnId 	g_pMtk->qy_GetCurrScrnId
+
+#define ClearAllKeyHandler 	g_pMtk->qy_ClearAllKeyHandler
 #define GetHighlightedItem 	g_pMtk->qy_GetHighlightedItem
 #define RegisterHighlightHandler 	g_pMtk->qy_RegisterHighlightHandler
 #define ClearHighlightHandler 	g_pMtk->qy_ClearHighlightHandler
@@ -225,5 +237,15 @@ extern QY_ADAPTOR * g_pMtk;
 #define wgui_inputs_register_validation_func 	g_pMtk->qy_wgui_inputs_register_validation_func
 #define MtkSocketConnect 	g_pMtk->qy_MtkSocketConnect
 
+#define GLOBAL_BASE      	(g_pMtk->Globalbase) 
+#define IDLE_APP_BASE      	(g_pMtk->IdleAppResBase) 
+#define MAIN_MENU_BASE      	(g_pMtk->MainMenuResBase) 
+#define MSG_ID_SOC_CODE_BEGIN      	(g_pMtk->MsgSocIdStart) 
+#define MOD_MMI      	(g_pMtk->ModMMI) 
+#define MENU_ID_QINYI_APP_END      	(g_pMtk->SrcStart) 
+#define MENU_ID_QINYI_APP_START      	(g_pMtk->SrcEnd) 
+#define QINYI_TIMER_ID_START      	(g_pMtk->TmIdStart) 
+#define QINYI_TIMER_ID_END      	(g_pMtk->TmIdEnd) 
+#define QINYI_PROG_VERSION      	(g_pMtk->SW_Ver) 
 
 

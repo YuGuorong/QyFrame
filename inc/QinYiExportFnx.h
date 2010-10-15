@@ -5,11 +5,11 @@
 /*********************************************************/
 
 
-#define QY_ADAPTO_ELEMENT  	\
-	\
+#define QY_ADAPTO_ELEMENT      \
+    \
 	kal_wsprintf,\
 	kal_prompt_trace,\
-	\
+    \
 	kal_wstrlen,\
 	kal_wstrcpy,\
 	kal_wstrncpy,\
@@ -19,7 +19,7 @@
 	kal_wstrncat,\
 	kal_wstrchr,\
 	kal_wstrrchr,\
-	\
+    \
 	mmi_ucs2toi,\
 	mmi_ucs2tox,\
 	mmi_asc_to_wcs,\
@@ -32,40 +32,46 @@
 	mmi_wcsupr,\
 	mmi_wcsicmp,\
 	mmi_wcsnicmp,\
-	\
+    \
 	FuncQyMalloc,\
 	FuncQyFree,\
-	\
+    \
 	StopTimer,\
 	StartTimer,\
 	StartTimerEx,\
 	applib_dt_get_date_time,\
-	\
+    \
 	playRequestedTone,\
 	stopRequestedTone,\
-	\
+    \
 	FS_Open,\
 	FS_Close,\
 	FS_Read,\
 	FS_Write,\
 	FS_Seek,\
 	FS_Commit,\
-	\
+    \
 	FS_GetFileSize,\
 	FS_GetFilePosition,\
-	\
+    \
 	FS_Delete,\
 	FS_CheckFile,\
-	\
+    \
 	FS_GetCurrentDir,\
 	FS_SetCurrentDir,\
 	FS_CreateDir,\
 	FS_RemoveDir,\
-	\
+    \
 	FS_Rename,\
 	FS_XDelete,\
 	FS_GetDrive,\
-	\
+    \
+	WriteRecord,\
+	ReadRecord,\
+	ReadMultiRecord,\
+	WriteValue,\
+	ReadValue,\
+    \
 	mmi_frm_set_protocol_event_handler,\
 	soc_create,\
 	soc_setsockopt,\
@@ -77,34 +83,34 @@
 	soc_accept,\
 	soc_connect,\
 	soc_sendto,\
-	\
+    \
 	soc_send,\
 	soc_recv,\
 	soc_recvfrom,\
 	soc_shutdown,\
 	soc_close,\
-	\
+    \
 	open_scan_engine,\
 	trig_on_scan_engine,\
 	close_scan_engine,\
-	\
+    \
 	wgui_status_icon_show_status_icon,\
 	wgui_status_icon_hide_status_icon,\
 	wgui_status_icon_update_status_icons,\
 	set_softkey_label,\
-	\
+    \
 	get_image,\
 	get_string,\
 	GetRootTitleIcon,\
-	\
+    \
 	AddListSelItem,\
 	AddListFullEditItem,\
 	AddListItem,\
 	ShowQinYiList,\
-	\
+    \
 	ShowQinYiMenu,\
 	mmi_scan_display_popup,\
-	\
+    \
 	EntryNewScreen,\
 	GetActiveScreenId,\
 	GetHistory,\
@@ -120,7 +126,13 @@
 	GetCurrNInputBuffer,\
 	SetDelScrnIDCallbackHandler,\
 	ClearDelScrnIDCallbackHandler,\
-	\
+	DeleteBetweenScreen,\
+    \
+	GetPreviousScrnIdOf,\
+	GetNextScrnIdOf,\
+	GetCurrScrnId,\
+    \
+	ClearAllKeyHandler,\
 	GetHighlightedItem,\
 	RegisterHighlightHandler,\
 	ClearHighlightHandler,\
@@ -130,7 +142,7 @@
 	SetRightSoftkeyFunction,\
 	entry_full_screen,\
 	leave_full_screen,\
-	\
+    \
 	ExecuteCurrKeyHandler,\
 	GetkeyInfo,\
 	GetKeyHandler,\
@@ -139,21 +151,21 @@
 	ClearKeyHandler,\
 	PowerAndEndKeyHandler,\
 	ClearKeyEvents,\
-	\
+    \
 	SetScanKeyHandler,\
 	GetScanKeyHandler,\
 	SetDefaultScanKeyHandlers,\
-	\
+    \
 	get_softkey_label,\
 	set_softkey_icon,\
 	get_softkey_icon,\
 	change_softkey,\
 	show_softkey,\
 	clear_softkey_handler,\
-	\
+    \
 	gdi_layer_lock_frame_buffer,\
 	gdi_layer_unlock_frame_buffer,\
-	\
+    \
 	wgui_update_inline_data,\
 	QyAdpTrace,\
 	DisplayPopup,\
@@ -161,7 +173,7 @@
 	RedrawCategory57Screen,\
 	SetHighlightIndex,\
 	RedrawListCategoryScreen,\
-	\
+    \
 	InitializeCategory57Screen,\
 	ExitCategory57Screen,\
 	CloseCategory57Screen,\
@@ -178,7 +190,7 @@
 	SetCategory57LeftSoftkeyFunction,\
 	SetCategory57RightSoftkeyFunctions,\
 	SetCategory57Data,\
-	\
+    \
 	SetInlineItemTextEdit,\
 	RegisterInlineTextEditValidationFunction,\
 	SetInlineTextEditCustomFunction,\
@@ -189,7 +201,7 @@
 	SetInlineItemMultiLineEdit,\
 	SetInlineMultiLineRdOnly,\
 	set_inscreen_multi_line_input_box_changed,\
-	\
+    \
 	SetInlineItemImageText,\
 	SetInlineItemCaption,\
 	SetInlineItemDisplayOnly,\
@@ -211,17 +223,31 @@
 	SetHighlightedAttachment,\
 	DisableInlineItemHighlight,\
 	EnableInlineItemHighlight,\
-	\
+    \
 	ShowCategory353Screen,\
-	\
+    \
 	ShowCategory57Screen_ex,\
-	\
+    \
 	ShowCategory79Screen,\
-	\
+    \
 	ShowCategory111Screen,\
 	SetCategory111RightSoftkeyFunction,\
 	wgui_inputs_register_validation_func,\
 	MtkSocketConnect,\
-	\
-	\
-	\
+    \
+    GLOBAL_BASE,  \
+    IDLE_APP_BASE,  \
+    MAIN_MENU_BASE,  \
+    MSG_ID_SOC_CODE_BEGIN,  \
+    MOD_MMI,  \
+    MENU_ID_QINYI_APP_END,  \
+    MENU_ID_QINYI_APP_START,  \
+    QINYI_TIMER_ID_START,  \
+    QINYI_TIMER_ID_END,  \
+    QINYI_PROG_VERSION,  \
+    &g_qy_socket_id,  \
+    \
+    &gIndexIconsImageList[0],  \
+    &currentHighlightIndex,  \
+    &wgui_inline_items[0],  \
+    &g_pext  \

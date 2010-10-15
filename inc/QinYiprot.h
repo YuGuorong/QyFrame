@@ -5,6 +5,7 @@ typedef S32         MMI_key_event_type;
 typedef U16         UI_string_ID_type;
 typedef U16         UI_image_ID_type;
 typedef U16         UI_audio_ID_type;
+typedef kal_uint16  nvram_lid_enum;
 typedef MYTIME      UI_time;
 typedef void (*pfncScanDone)(U16 *strcode);
 
@@ -16,7 +17,6 @@ typedef void (*pfncScanDone)(U16 *strcode);
  
 
 // Add export interface here. just declare prototype only, and then regenerate other headers
-#if !defined(QY_PIKE_PROJ) || (QY_PIKE_PROJ  == 0) 
 
 #ifdef __cplusplus
 extern "C" {
@@ -81,6 +81,12 @@ extern "C" {
     int FS_Rename(const WCHAR * FileName, const WCHAR * NewName);
     int FS_XDelete(const WCHAR * FullPath, UINT Flag, BYTE *RecursiveStack, const UINT StackSize);
     int FS_GetDrive(UINT Type, UINT Serial, UINT AltMask);
+
+    S32 WriteRecord(nvram_lid_enum nLID, U16 nRecordId, void *pBuffer, U16 nBufferSize, S16 *pError);
+    S32 ReadRecord(nvram_lid_enum nLID, U16 nRecordId, void *pBuffer, U16 nBufferSize, S16 *pError);
+    S32 ReadMultiRecord(nvram_lid_enum nLID, U16 nRecordId, void *pBuffer, U16 nBufferSize, U16 nRecordAmount, S16 *pError);
+    S32 WriteValue(U16 nDataItemId, void *pBuffer, U8 nDataType, S16 *pError);
+    S32 ReadValue(U16 nDataItemId, void *pBuffer, U8 nDataType, S16 *pError);
 
     void mmi_frm_set_protocol_event_handler(U16 eventID, PsIntFuncPtr funcPtr, MMI_BOOL isMultiHandler);
     kal_int8 soc_create(    kal_uint8         domain,
@@ -169,7 +175,13 @@ extern "C" {
     U8 *GetCurrNInputBuffer(U16 scrnid, U16 *size);
     U8 SetDelScrnIDCallbackHandler(U16 ScrnID, HistoryDelCBPtr funcPtr);
     U8 ClearDelScrnIDCallbackHandler(U16 ScrnID, HistoryDelCBPtr funcPtr);
+    U16 DeleteBetweenScreen(U16 StartScrId, U16 EndScrId);
+
+    MMI_BOOL GetPreviousScrnIdOf(U16 scrnId, U16 *previousScrnId);
+    MMI_BOOL GetNextScrnIdOf(U16 scrnId, U16 *nextScrnId);
+    U16 GetCurrScrnId(void);    
     
+    void ClearAllKeyHandler(void);
     S32 GetHighlightedItem(void);
     void RegisterHighlightHandler(void (*f) (S32 item_index));
     void ClearHighlightHandler(void);
@@ -285,7 +297,7 @@ extern "C" {
     void DisableInlineItemHighlight(InlineItem *i);
     void EnableInlineItemHighlight(InlineItem *item);
        
- void ShowCategory353Screen(
+    void ShowCategory353Screen(
             U8 *title,
             U16 title_icon,
             U16 left_softkey,
@@ -341,27 +353,26 @@ extern "C" {
     void wgui_inputs_register_validation_func(void (*f) (U8 *, U8 *, S32));
     int MtkSocketConnect( U8 * pIp, int port, int acount_id, int(*fnxCb)(void*, int));
 
-#ifdef QINYI_DECLARE_EXPORT_FOR_SCRIPT
     //Gloabal variables here
-    int Globalbase;    
-    int IdleAppResBase;
-    int MainMenuResBase;
-    int MsgSocIdStart;
-    int ModMMI;
-    int SrcStart;
-    int SrcEnd;
-    int TmIdStart;
-    int TmIdEnd;
-    int SW_Ver;
-    kal_int8 *socket_id;
+    int Globalbase                      =    GLOBAL_BASE,    
+    int IdleAppResBase                  =    IDLE_APP_BASE,
+    int MainMenuResBase                 =    MAIN_MENU_BASE,
+    int MsgSocIdStart                   =    MSG_ID_SOC_CODE_BEGIN,
+    int ModMMI                          =    MOD_MMI,                    //ModMMI;
+    int SrcStart                        =    MENU_ID_QINYI_APP_END,      //SrcStart;
+    int SrcEnd                          =    MENU_ID_QINYI_APP_START,    //SrcEnd;
+    int TmIdStart                       =    QINYI_TIMER_ID_START,       //TmIdStart;
+    int TmIdEnd                         =    QINYI_TIMER_ID_END,         //TmIdEnd;
+    int SW_Ver                          =    QINYI_PROG_VERSION, 
+    kal_int8 *socket_id                 =    &g_qy_socket_id,
 
-    const U16 * pIndexIconsImageList;
-    U8 *  pcurrentHighlightIndex;
-    void * gp_inline_items;
-#endif /*QINYI_DECLARE_EXPORT_FOR_SCRIPT*/
+    const U16 * pIndexIconsImageList    =    &gIndexIconsImageList[0],
+    U8 *  pcurrentHighlightIndex        =    &currentHighlightIndex,
+    void * gp_inline_items              =    &wgui_inline_items[0],
+    void * pextern                      =    &g_pext 
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif /*QY_PIKE_PROJ */
 

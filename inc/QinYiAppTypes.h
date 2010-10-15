@@ -1,10 +1,6 @@
 #ifndef _QINYI_APPTYPES_H
 #define _QINYI_APPTYPES_H
 
-#define QINYI_PROG_VERSION      1
-#define QY_APPLICATION_VERSION    4
-
-
 #define CMD_LOGIN         1000
 #define CMD_LOGIN_REQ     1
 #define CMD_LOGIN_ACK     2
@@ -16,13 +12,11 @@
 #define CMD_SRECTP_ACK    2
 
 #define CMD_PROBLEM       1004
-
 #define CMD_QUERYUPDATE   1100
 #define CMD_UPDATESW      1101
 #define CMD_QUERYUPDATE_REQ  2
 
-
-#define MAX_RDID_LEN       12
+#define MAX_RDID_LEN       14
 #define DEF_ID_MAX_BUFF    32
 
 #define QY_MAX_CUSTID_LEN   8
@@ -50,6 +44,7 @@
 #define  SRC_SETTING_AUTH     SCR_QINYI_APP_WINDOW_18
 #define  SRC_SETTING_APP      SCR_QINYI_APP_WINDOW_19
 
+#define SOC_EXT_MSG           0x10
 
 typedef enum storage_id
 {
@@ -184,6 +179,7 @@ typedef struct _QY_ALL_TASKINFO
 extern QY_SETTING_PROF * g_SettingProf;
 
 extern U16 g_QyFolders[][24];
+void GetQyPathFile(U16 * buff, QY_STORAGE_ID qid, U16* filename);
 int OpenQyFile(QY_STORAGE_ID qid, U16* filename, int mode);
 int DeleteQyFile(QY_STORAGE_ID qid, U16* filename);
 S32 OpenQyDir(QY_STORAGE_ID dir);
@@ -226,11 +222,13 @@ void FuncQyFree(void *ptr);
 unsigned int FuncQyMallocSetBlockSize(unsigned int blocksz);
 void FuncInitQyHeap(void * buff, int len);
 
-
 //U8 SetDelScrnIDCallbackHandler(U16 ScrnID, HistoryDelCBPtr funcPtr)
 U16 GetCurScrnID(void);
 int DeleleTask(int ftype, int index);
 int QySocketConnect( U8 * pIp, int port, int(*fnxCb)(void*));
+int OnUiUpdateStart(void);
+void OnUiUpdateEnd(U16 srcid);
+
 
 
 #endif /*_QINYI_APPTYPES_H*/

@@ -8,7 +8,7 @@ static S32 OpenQyStrDir(PS8 filepath)
     /*----------------------------------------------------------------*/
     S32 fs_ret;
     FS_HANDLE file_handle;
-
+ 
     /*----------------------------------------------------------------*/
     /* Code Body                                                      */
     /*----------------------------------------------------------------*/
@@ -27,7 +27,7 @@ static S32 OpenQyStrDir(PS8 filepath)
         fs_ret = FS_FAT_ALLOC_ERROR;
         return fs_ret;
     }
-
+  
 
     //fmgr_main_notify_done(MMI_FMGR_NOTIFY_BEFORE_CREATE_FOLDER, buffer, FALSE, TRUE,NULL, FALSE, FALSE);
     /* create directory if it is not there */
@@ -42,7 +42,6 @@ static S32 OpenQyStrDir(PS8 filepath)
     return fs_ret;
 }
 
-
 U16 g_QyFolders[][24] = { 
     {(L"C:\\QinYiApp")}, 
     {(L"C:\\QinYiApp\\Settting")},
@@ -51,12 +50,20 @@ U16 g_QyFolders[][24] = {
     {(L"C:\\QinYiApp\\temp")}
 };
 
+
+void GetQyPathFile(U16 * buff, QY_STORAGE_ID qid, U16* filename)
+{
+    kal_wsprintf( buff, "%w\\%w", g_QyFolders[qid],filename);
+}
+
 int OpenQyFile(QY_STORAGE_ID qid, U16* filename, int mode)
 {
     int fs_h ;
     U16 unicode_buf[256];
+    if( mode & FS_READ_WRITE)
+        mode |= FS_COMMITTED;
     
-    kal_wsprintf( unicode_buf, "%w\\%w", g_QyFolders[qid],filename);
+    GetQyPathFile( unicode_buf, qid, filename);
 
     
     fs_h = FS_Open(unicode_buf,mode );
@@ -74,7 +81,7 @@ int DeleteQyFile(QY_STORAGE_ID qid, U16* filename)
     int ret ;
     U16 unicode_buf[256];
     
-    kal_wsprintf( unicode_buf, "%w\\%w", g_QyFolders[qid],filename);
+   GetQyPathFile( unicode_buf, qid, filename);
 
     
     ret = FS_Delete(unicode_buf);
@@ -105,7 +112,7 @@ void InitStorage(void)
 
     for(i=0 ; i<QY_STORAGE_MAX; i++)
     {
-         //g_QyFolders[i][0] = (U16)drive_usr;
+         g_QyFolders[i][0] = (U16)drive_usr;
          OpenQyStrDir((PS8)g_QyFolders[i]);
     }
     
@@ -141,6 +148,7 @@ int SaveQySettingProfile(QY_SETTING_PROF * psetting)
     }
 
     fs_h =*/ OpenQyFile(QY_SETTING, L"profile.bin",mode);
+    psetting->BinHost_port = psetting->Host_port+1;
     if(fs_h)
     {
         FS_Seek(fs_h, 0, FS_FILE_BEGIN);
@@ -173,6 +181,26 @@ QY_SETTING_PROF * LoadQySetting(void)
         }
     }
     return pSetting;
+}
+
+U32 CalcLocal(void)
+{	
+    U32 sum =0, buff;
+	int fsh = OpenQyFile(QY_PROG, L"AppsEntry.bin", FS_READ_ONLY);
+	if( fsh > 0 )
+	{
+		{
+			UINT rd; 
+            do{
+                buff = 0;
+    			FS_Read(fsh, &buff, 4, &rd);
+                sum += buff;                
+            }while(rd==4);
+            kal_prompt_trace(MOD_MMI,"flex bin: %d", rd);
+		}
+		FS_Close(fsh);
+	}
+	return sum;
 }
 
 
