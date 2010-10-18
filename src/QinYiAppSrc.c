@@ -322,20 +322,22 @@ void QureySwUpdateable(void);
 USER_INFO * g_SysUserInfo ;
 MYTIME    g_LastServerAuthenTime;
 static U8 g_curListWndSel = 0;
-
-
-//Function -------------------------------------------------------------------
-int OnUiUpdateStart(void)
+void DisableKeyEvent(void)
 {
     int i;
-    DisplayPopup((PU8)((U16*)"\x47\x53\xA7\x7E\xB\x7A\x8F\x5E\x2E\x0\x2E\x0\x2E\x0\x0\x0") /*L"升级程序..."*/, QY_RES(IMG_GLOBAL_PROGRESS), 1,(U32) -1, 0);
-
     for( i=KEY_0; i<KEY_EXTRA_B;i++)
     {
         SetKeyHandler(NULL, i, KEY_EVENT_DOWN);
         SetKeyHandler(NULL, i, KEY_EVENT_UP);  
     }
+}
 
+
+//Function -------------------------------------------------------------------
+int OnUiUpdateStart(void)
+{
+    DisplayPopup((PU8)((U16*)"\x47\x53\xA7\x7E\xB\x7A\x8F\x5E\x2E\x0\x2E\x0\x2E\x0\x0\x0") /*L"升级程序..."*/, QY_RES(IMG_GLOBAL_PROGRESS), 1,(U32) -1, 0);
+    DisableKeyEvent();
     return GetCurrScrnId();
 }
 
@@ -357,6 +359,11 @@ void SetQyLoginAuthenStatus(AUTHEN_TYPE  QyLogStatus)
 
 void QyOnLoginAck(int ret)
 {
+    U16 sid = GetActiveScreenId();
+    if(sid ==  POPUP_SCREENID)
+    {
+        ClearAllKeyHandler();
+    }
     if( ret > 0 )
     {
         int cmd, err,field;
@@ -423,7 +430,8 @@ void QY_LoginCheck(void)
         if( QySendLoginCmd(g_QinYi_UserName,g_QinYi_User_Pswd,QyOnLoginAck) )
         {
             DisplayPopup((PU8)((U16*)"\xDE\x8F\xA5\x63\xD\x67\xA1\x52\x68\x56\x2E\x0\x2E\x0\x2E\x0\x0\x0") /*L"连接服务器..."*/, QY_RES(IMG_GLOBAL_PROGRESS), 1,(U32) -1, 0);
-            //EntryQYLoginProcess();            
+            //EntryQYLoginProcess();  
+            DisableKeyEvent();
         }
         else
         {
@@ -1254,7 +1262,7 @@ void QyPeoblemListEntry(void)
     ADD_TEXT_ITEM(((U16*)"\xD1\x53\x1\x90\x70\x65\x6E\x63\x0\x0") /*L"发送数据"*/);
     kal_wsprintf(g_SignRecptCpat,"%w:%d",((U16*)"\x6B\x62\xCF\x63\x0\x0") /*L"扫描"*/, g_pProblemTask->totals);
     ADD_CAPTION_ITEM( g_SignRecptCpat);
-    ADD_EDIT_ITEM(g_RfBarCode,12,IMM_INPUT_TYPE_NUMERIC);    
+    ADD_EDIT_ITEM(g_RfBarCode,MAX_RDID_LEN,IMM_INPUT_TYPE_NUMERIC);    
     ADD_CAPTION_ITEM( ((U16*)"\xEE\x95\x98\x98\xF6\x4E\x7B\x7C\x8B\x57\x0\x0") /*L"问题件类型"*/);
     ADD_EDIT_ITEM(g_SignRecptName,2,IMM_INPUT_TYPE_NUMERIC);    
     for(i=0; i<sizeof(g_ProblemTextList)/(sizeof(U8)*QY_SIZE_PRBLEM_LIST_MAX); i++)
@@ -1762,9 +1770,13 @@ void InitMenuStr(void)
 
 }
 
+
+U32 g_R9Val;
+
+
 void QinYiAppMain(void)
 {           
-    kal_prompt_trace(MOD_MMI," Dll Entry");  
+    kal_prompt_trace(MOD_MMI," Dll Entry, %x,%x,%d",R9_BASE_BACKUP,g_R9Val, FLAG_BASE_BACKUP);  
 
     SetKeyHandler(NULL, KEY_EXTRA_1,   KEY_EVENT_UP);
     SetKeyHandler(NULL, KEY_QUICK_ACS, KEY_EVENT_UP);  

@@ -21,6 +21,9 @@ extern char Image$$ZI$$Limit[];// 输出 ZI 输出节末尾后面的字节的地址。
 
 extern int main(int argc , void * argv[]);
 __global_reg(6) int R9;
+#define R9_BASE_BACKUP    (*(unsigned int*)0x5010f000) 
+#define FLAG_BASE_BACKUP    (*(unsigned int*)0x5010f004) 
+extern unsigned long g_R9Val;
 
 
 static void rtcinit(int rtaddr)
@@ -36,8 +39,11 @@ static void rtcinit(int rtaddr)
     rw_start = ro_start + RO_LENGTH;
     zi_start = rw_start + RW_LENGTH;
 	R9 = (int)rw_start ;
+    R9_BASE_BACKUP = (unsigned int)rw_start;
+    FLAG_BASE_BACKUP = 13;
 
     memset(zi_start, 0, zi_len);
+    g_R9Val =  (unsigned int)rw_start;
 
 }
 
