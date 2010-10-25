@@ -1,3 +1,4 @@
+#define QY_MODULE     0x1
 #include "QinYiCommon.h"
 
  /*****************************************************************************/
@@ -131,8 +132,12 @@ const QY_SETTING_PROF g_QyDefaultSetting =
     {L"01291.001",L""},
     L"12345678",
     {218,246,21,43},
-    3456,
-    600
+    9988,
+    600,
+    9989,
+    0,
+    0,
+    0
 };
 
 int SaveQySettingProfile(QY_SETTING_PROF * psetting)
@@ -141,8 +146,8 @@ int SaveQySettingProfile(QY_SETTING_PROF * psetting)
     int mode = FS_READ_WRITE| FS_CREATE;
     int fs_h = /* OpenQyFile(QY_SETTING, L"profile.bin",FS_READ_ONLY);
     
-    if(fs_h > 0 ) 
-    {
+    if(fs_h > 0 )    
+    { 
         mode = FS_READ_WRITE;
         FS_Close(fs_h);
     }
@@ -160,9 +165,8 @@ int SaveQySettingProfile(QY_SETTING_PROF * psetting)
 }
 
 
-QY_SETTING_PROF * LoadQySetting(void)
+int LoadQySetting(QY_SETTING_PROF *  pSetting)
 {
-    QY_SETTING_PROF * pSetting = (QY_SETTING_PROF *)QyMalloc(sizeof(QY_SETTING_PROF));
     if( pSetting )
     {
         UINT rlen = 0;
@@ -180,7 +184,7 @@ QY_SETTING_PROF * LoadQySetting(void)
             SaveQySettingProfile(pSetting);
         }
     }
-    return pSetting;
+    return 0;
 }
 
 U32 CalcLocal(void)

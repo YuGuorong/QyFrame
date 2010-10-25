@@ -1,3 +1,4 @@
+#define QY_MODULE     0x2
 #include "QinYiCommon.h"
 
 #define LOGIN_MODULE 
@@ -20,12 +21,25 @@
 ************************************************************************************************/
 int QyCheckPassword(void);
 void OnSideKeyHandle(void);
+void ResetAsySendTimer(void);
 
-QY_SETTING_PROF * g_SettingProf;
-static U8 g_bQyAuthenticate = UN_AUTHEN;
+QY_SETTING_PROF *  g_SettingProf;
 HistoryDelCBPtr g_fncQyConfirmAbort = NULL;
 U16 g_QinYi_UserName[QY_USER_MAX_LEN+1];
 U16 g_QinYi_User_Pswd[QY_PSWD_MAX_LEN+1];
+
+void OnPopopEndKey(void)
+{
+    ClearAllKeyHandler();
+    CancelNet();
+}
+
+static void PopupWait(U8 *string, U16 imageId, U8 imageOnBottom, U32 popupDuration, U8 toneId)
+{
+    DisplayPopup(string, imageId, imageOnBottom, popupDuration, toneId);
+    DisableKeyEvent();
+    SetKeyHandler(OnPopopEndKey, KEY_END, KEY_EVENT_UP);
+}
 
 static void QyExitWihoutSave(void)
 {
@@ -55,13 +69,24 @@ void SetConfirmExitAbortion(HistoryDelCBPtr funcAbort)
     g_fncQyConfirmAbort = funcAbort;
 }
 
+pfncScanDone g_QyScanCallback;
 
+void QyScanDone(U16 *strcode)
+{
+    if( g_QyScanCallback )
+        g_QyScanCallback(strcode);
+    close_scan_engine();
+}
 
 
 static void OnScanKeyTrigle(void)
 {
-    trig_on_scan_engine();
-    kal_prompt_trace(MOD_MMI,"OnScanKeyTrigle" );
+    if( g_QyScanCallback )
+    {
+        open_scan_engine(QyScanDone);
+        trig_on_scan_engine();
+        kal_prompt_trace(MOD_MMI,"OnScanKeyTrigle" );
+    }
 }
 
 
@@ -71,7 +96,8 @@ static void QinYiCloseScanDev(void)
     kal_prompt_trace(MOD_MMI,"QinYiCloseScanDev %d",GetScanKeyHandler() );   
     if( GetScanKeyHandler() )
     {
-        close_scan_engine();
+        //close_scan_engine();
+        g_QyScanCallback = NULL;
         kal_prompt_trace(MOD_MMI,"close_scan_engine" );   
         SetScanKeyHandler( NULL );
     	SetDefaultScanKeyHandlers();
@@ -83,7 +109,8 @@ static void QinYiSetScanHandle(pfncScanDone pfnx_scan_done)
     kal_prompt_trace(MOD_MMI,"open_scan_engine & SetKeyHandler %d",GetScanKeyHandler() );    
     if( GetScanKeyHandler() == NULL )
     {
-        open_scan_engine(pfnx_scan_done);
+        //open_scan_engine(pfnx_scan_done);
+        g_QyScanCallback = pfnx_scan_done;
         kal_prompt_trace(MOD_MMI,"open_scan_engine" );           
         SetScanKeyHandler( OnScanKeyTrigle );
     	SetDefaultScanKeyHandlers();
@@ -206,7 +233,7 @@ int QyIPAddressString()
 
 void OnSettingDetailOK(void)
 {
-    S32 rlen;
+    S32 rlen , rec_time;
     U16 srcid = GetActiveScreenId();
     wgui_update_inline_data();
 
@@ -224,7 +251,13 @@ void OnSettingDetailOK(void)
     }
 
     mmi_ucs2toi(( S8 *)g_ServerPort, &g_SettingProf->Host_port, &rlen);
-    mmi_ucs2toi((S8*)g_strReconTime,&g_SettingProf->AutoConnectTime,&rlen);
+    
+    mmi_ucs2toi((S8*)g_strReconTime, &rec_time, &rlen);
+    if( rec_time != g_SettingProf->AutoConnectTime )
+    {
+        ResetAsySendTimer();
+        g_SettingProf->AutoConnectTime = rec_time;
+    }
     
     SaveQySettingProfile(g_SettingProf);
     
@@ -315,9 +348,9 @@ void QySettingDetailApp(void)
 #ifdef LOGIN_MODULE
 //protype -------------------------------------------------------------------
 void QinYiAppEntry(void);
-int QySaveUserAndPwd(USER_INFO  * puserinfo);
+int QySaveUserAndPwd(USER_INFO  * puserinfo); 
 int LoadUserAndPwd(void);
-void QureySwUpdateable(void);
+void QureySwUpdateable(void); 
 //Global -------------------------------------------------------------------
 USER_INFO * g_SysUserInfo ;
 MYTIME    g_LastServerAuthenTime;
@@ -329,7 +362,7 @@ void DisableKeyEvent(void)
     {
         SetKeyHandler(NULL, i, KEY_EVENT_DOWN);
         SetKeyHandler(NULL, i, KEY_EVENT_UP);  
-    }
+    } 
 }
 
 
@@ -339,16 +372,21 @@ int OnUiUpdateStart(void)
     DisplayPopup((PU8)((U16*)"\x47\x53\xA7\x7E\xB\x7A\x8F\x5E\x2E\x0\x2E\x0\x2E\x0\x0\x0") /*L"升级程序..."*/, QY_RES(IMG_GLOBAL_PROGRESS), 1,(U32) -1, 0);
     DisableKeyEvent();
     return GetCurrScrnId();
-}
+} 
 
-void OnUiUpdateEnd(U16 srcid)
+void OnUiUpdateEnd(U16 srcid, int result)
 {
-    U16 sid = GetCurrScrnId();
-    if(sid ==  srcid)
+    if( result == 0 )
     {
-        ClearAllKeyHandler();
-        GoBackHistory();
+        if( g_SettingProf->UpgradeMode == 0 )
+            GoBackToHistory(IDLE_SCREEN_ID);
+        DisplayPopup((PU8)("\x47\x53\xA7\x7E\xB\x7A\x8F\x5E\x10\x62\x9F\x52\xC\xFF\xF7\x8B\xCD\x91\xB0\x65\x7B\x76\x55\x5F\x0\x0") /*L"升级程序成功，请重新登录"*/, QY_RES(IMG_GLOBAL_OK), 0, UI_POPUP_NOTIFYDURATION_TIME, 0);
     }
+    else
+    {
+        DisplayPopup(((PU8)"\x47\x53\xA7\x7E\xB\x7A\x8F\x5E\x31\x59\x25\x8D\x0\x0") /*L"升级程序失败"*/, QY_RES(IMG_GLOBAL_ERROR), 0, UI_POPUP_NOTIFYDURATION_TIME, 0);
+    }
+    
 }
 
 void SetQyLoginAuthenStatus(AUTHEN_TYPE  QyLogStatus)
@@ -357,7 +395,7 @@ void SetQyLoginAuthenStatus(AUTHEN_TYPE  QyLogStatus)
 }
 
 
-void QyOnLoginAck(int ret)
+int QyOnLoginAck(int ret)
 {
     U16 sid = GetActiveScreenId();
     if(sid ==  POPUP_SCREENID)
@@ -367,36 +405,62 @@ void QyOnLoginAck(int ret)
     if( ret > 0 )
     {
         int cmd, err,field;
+        MYTIME tmsvr, tmclt;
         void * hack = GetAckHandle(&cmd, &err,&field);
+
+        
         FreeAckHandle(hack);
 
         if( cmd == CMD_LOGIN  )
         {
             if( err == 0 || err == 2 )
             {
+                GetAckTime(hack, &tmsvr);
+
+                GetDateTime(&tmclt);
+                if(tmsvr.nYear != tmclt.nYear || tmsvr.nMonth != tmclt.nMonth 
+                    || tmsvr.nDay != tmclt.nDay || tmsvr.nHour != tmclt.nHour
+                    || tmsvr.nMin != tmclt.nMin )
+                {
+                    rtc_format_struct tmloc;
+                    tmloc.rtc_year = tmsvr.nYear-2000;
+                    tmloc.rtc_mon  = tmsvr.nMonth;
+                    tmloc.rtc_day  = tmsvr.nDay;
+                    tmloc.rtc_hour = tmsvr.nHour;
+                    tmloc.rtc_min  = tmsvr.nMin;
+                    tmloc.rtc_sec  = tmsvr.nSec;
+                    kal_prompt_trace(MOD_MMI,"Login set time: (%d-%d-%d,%d:%d:%d)",
+                    tmloc.rtc_year , 
+                    tmloc.rtc_mon  , 
+                    tmloc.rtc_day  , 
+                    tmloc.rtc_hour , 
+                    tmloc.rtc_min  , 
+                    tmloc.rtc_sec   );
+                    SetDateTimeEx( &tmloc);
+                }
                 kal_wstrncpy(g_SysUserInfo->name, g_QinYi_UserName, QY_USER_MAX_LEN);
                 kal_wstrncpy(g_SysUserInfo->pwd,  g_QinYi_User_Pswd,QY_PSWD_MAX_LEN);
 				QySaveUserAndPwd(g_SysUserInfo);
                 g_bQyAuthenticate = QY_AUTHEND;
                 GetDateTime(&g_LastServerAuthenTime);
                 //show main qinyi menu
-                gdi_layer_lock_frame_buffer();                
-                GoBackHistory();
+                gdi_layer_lock_frame_buffer();   
+                DeleteScreenIfPresent(POPUP_SCREENID);
                 GoBackHistory();
                 gdi_layer_unlock_frame_buffer();    
                  
                 QinYiAppEntry();
                 kal_prompt_trace(MOD_MMI,"Login statu (%d)", err );   
                 if( err == 2 )
+                {
                     QureySwUpdateable();
-                else
-                    StartQyAsySendThread();
+                }
             }
             else
             {
                 DisplayPopup((PU8)QureyErrorString(err), QY_RES(IMG_GLOBAL_ERROR), 0, UI_POPUP_NOTIFYDURATION_TIME, 0);
             }
-            return;
+            return 1;
         }
         else
         {
@@ -412,6 +476,8 @@ void QyOnLoginAck(int ret)
         gdi_layer_unlock_frame_buffer();    
         DisplayPopup((PU8)(((U16*)"\x1A\x90\xAF\x8B\x31\x59\x25\x8D\x0\x0") /*L"通讯失败"*/), QY_RES(IMG_GLOBAL_ERROR), 0, UI_POPUP_NOTIFYDURATION_TIME, 0);
     }
+
+    return 1;
         
 }
 
@@ -572,10 +638,14 @@ TASK_HEADER  * g_pSignRecptTask  = NULL;
 //Implemetion -------------------------------------------------------------------
 int IsValidCode()
 {
-#if 1
-    return 1;
-#else    
     int len  = kal_wstrlen(g_RfBarCode);
+    
+#if 1
+    if( len >= 10 )
+        return 1;
+    return 0;
+#else    
+    
     if( len == 10 || len == 12 || len == 13 )
         return 1;
     return 0;
@@ -596,7 +666,7 @@ static U8 ExitQinYnSignRecpt(void * p)
     return 0;
 }
 
-static void SendSignRecptData(void)
+static void StoreSignRecptData(void)
 {
     //YYYGGRRR QySendSignRecptCmd(g_SignRecptName,g_ScanTotal,g_QueuBars, QyOnSignRecptAck);
     SetTaskJunor(g_pSignRecptTask, g_SignRecptName, QY_USER_MAX_LEN);
@@ -628,13 +698,13 @@ static void QySignRecptCheck(void)
      }
      if(currentHighlightIndex == QY_SIGN_RECP_MAX)
      {
-        SendSignRecptData();
+        StoreSignRecptData();
      }
 }
 
 static void QySignReccpExit(void)
 {
-    if(g_pSignRecptTask->totals || g_RfBarCode[0] || g_SignRecptName[0])
+    if((g_pSignRecptTask&&g_pSignRecptTask->totals) || g_RfBarCode[0] || g_SignRecptName[0])
     {
         ConfirmExitWithSave();
     }
@@ -699,7 +769,7 @@ void SetSignRecptHighlightIndex(S32 nIndex)
         else
         {
             ChangeLeftSoftkey(QY_RES(STR_GLOBAL_OK), QY_RES(IMG_GLOBAL_OK));
-            SetLeftSoftkeyFunction(SendSignRecptData, KEY_EVENT_UP);
+            SetLeftSoftkeyFunction(StoreSignRecptData, KEY_EVENT_UP);
         }
     }
     else if( nIndex == QY_BAR_CODE  )
@@ -791,6 +861,11 @@ void EntryQinYiSignRecptEx(void)
 
 void EntryQinYiSignRecpt(void) 
 {
+    char * ptr = QyMalloc( 100);
+    kal_prompt_trace(MOD_MMI, "FuncQyCheckHeap %x", ptr);
+    FuncQyCheckHeap();
+    QyFree(ptr);
+    
     memset(g_RfBarCode,  0, 24 *2);
     memset(g_SignRecptName,0, QY_USER_MAX_LEN*2 );
     ExitQinYnSignRecpt(NULL);
@@ -844,23 +919,9 @@ void ShowQueueTaskEntry(void)
 U16 * g_pTaskTotal = NULL;
 U16 * g_pTaskTime = NULL;
 TASK_HEADER * g_pDeailTask = NULL ;
-#define QY_SIZE_PRBLEM_LIST_MAX  23
-U8 g_ProblemTextList[][QY_SIZE_PRBLEM_LIST_MAX] = {
- {("\x31\x0\x2E\x0\x35\x75\xDD\x8B\xE0\x65\xBA\x4E\xA5\x63\x2C\x54\x0\x0") /*L"1.电话无人接听"*/}
-,{("\x32\x0\x2E\x0\xE5\x67\xE0\x65\x64\x6B\xBA\x4E\x0\x0") /*L"2.查无此人"*/}
-,{("\x33\x0\x2E\x0\x30\x57\x40\x57\xD\x4E\xE6\x8B\x0\x0") /*L"3.地址不详"*/}
-,{("\x34\x0\x2E\x0\xD2\x62\xDD\x7E\x30\x52\xD8\x4E\x3E\x6B\x0\x0") /*L"4.拒绝到付款"*/}
-,{("\x35\x0\x2E\x0\xD2\x62\xDD\x7E\xE3\x4E\x36\x65\x27\x8D\x3E\x6B\x0\x0") /*L"5.拒绝代收货款"*/}
-,{("\x36\x0\x2E\x0\xA2\x5B\x37\x62\xD2\x62\x36\x65\x0\x0") /*L"6.客户拒收"*/}
-,{("\x37\x0\x2E\x0\x34\x78\x5F\x63\xF6\x4E\x0\x0") /*L"7.破损件"*/}
-,{("\x38\x0\x2E\x0\xA2\x5B\x37\x62\x81\x89\x42\x6C\xCD\x91\xB0\x65\x3E\x6D\xD1\x53\x0\x0") /*L"8.客户要求重新派发"*/}
-,{("\x39\x0\x2E\x0\xB6\x5B\x2D\x4E\xE0\x65\xBA\x4E\x0\x0") /*L"9.家中无人"*/}
-,{("\x31\x0\x30\x0\x76\x51\xD6\x4E\x0\x0") /*L"10其他"*/}
-};
-
 extern const int g_cmdReqAck[];
 
-void TaskSendDone(int ret)
+int TaskSendDone(int ret)
 {
     if( ret > 0 )
     {
@@ -887,10 +948,9 @@ void TaskSendDone(int ret)
         else
         {
             DisplayPopup((PU8)(((U16*)"\x1A\x90\xAF\x8B\x31\x59\x25\x8D\x0\x0") /*L"通讯失败"*/), QY_RES(IMG_GLOBAL_ERROR), 0, UI_POPUP_NOTIFYDURATION_TIME, 0);
-        }
-        
-            
+        }        
     }
+    return 1;
 }
 
 void OnConfirmSendTask(void)
@@ -899,7 +959,7 @@ void OnConfirmSendTask(void)
     {
         if( SendTask(g_pDeailTask, 1, TaskSendDone) )
         {
-            DisplayPopup((PU8)("\xDE\x8F\xA5\x63\xD\x67\xA1\x52\x68\x56\x2E\x0\x2E\x0\x2E\x0\x0\x0") /*L"连接服务器..."*/, QY_RES(IMG_GLOBAL_PROGRESS), 1,(U32) -1, 0);
+            PopupWait((PU8)("\xDE\x8F\xA5\x63\xD\x67\xA1\x52\x68\x56\x2E\x0\x2E\x0\x2E\x0\x0\x0") /*L"连接服务器..."*/, QY_RES(IMG_GLOBAL_PROGRESS), 1,(U32) -1, 0);
             //EntryQYLoginProcess();            
         }
         else
@@ -960,17 +1020,19 @@ int FillSignJunorItem(int idx)
 
 }
 
+extern U8 * GetProblemTextByIndex(int index);
 int FillProblemJunorItem(int idx)
 {
     S32 ProblemIndex = 0;
+    U16 * pProblemText ;
     PROBLEM_JOUNOR * pJunor= (PROBLEM_JOUNOR*)g_pDeailTask->pJunor; 
     
     ADD_CAPTION_ITEM(  ((U16*)"\xEE\x95\x98\x98\xF6\x4E\x7B\x7C\x8B\x57\x0\x0") /*L"问题件类型"*/);
     //ADD_TEXT_ITEM( pJunor->ProblemID );
     mmi_ucs2toi((S8*)pJunor->ProblemID, (S32*)&ProblemIndex, NULL);
 
-    if(ProblemIndex&& ProblemIndex < sizeof(g_ProblemTextList)/(sizeof(U8)*QY_SIZE_PRBLEM_LIST_MAX))
-        ADD_TEXT_ITEM(  (U16*)g_ProblemTextList[ProblemIndex-1] );
+    if(ProblemIndex && (pProblemText =  (U16*)GetProblemTextByIndex(ProblemIndex-1) ) != NULL)
+        ADD_TEXT_ITEM( pProblemText );
 
     kal_wsprintf(g_pTaskTotal, "%w(%d)",((U16*)"\xD0\x8F\x55\x53\x70\x65\x0\x0") /*L"运单数"*/, g_pDeailTask->totals);
     
@@ -1244,6 +1306,7 @@ void QyPeoblemListEntry(void)
     /*----------------------------------------------------------------*/
     U8 *guiBuffer;
     U8 *inputBuffer;
+    U16 * pProblemText;
     U16 inputBufferSize;
     int idx = 0, i;
 
@@ -1265,9 +1328,9 @@ void QyPeoblemListEntry(void)
     ADD_EDIT_ITEM(g_RfBarCode,MAX_RDID_LEN,IMM_INPUT_TYPE_NUMERIC);    
     ADD_CAPTION_ITEM( ((U16*)"\xEE\x95\x98\x98\xF6\x4E\x7B\x7C\x8B\x57\x0\x0") /*L"问题件类型"*/);
     ADD_EDIT_ITEM(g_SignRecptName,2,IMM_INPUT_TYPE_NUMERIC);    
-    for(i=0; i<sizeof(g_ProblemTextList)/(sizeof(U8)*QY_SIZE_PRBLEM_LIST_MAX); i++)
+    for(i=0; (pProblemText=(U16 *)GetProblemTextByIndex(i))!= NULL; i++)
     {
-        ADD_TEXT_ITEM((U16*)(g_ProblemTextList[i]));
+        ADD_TEXT_ITEM(pProblemText);
     }
     ADD_CAPTION_ITEM( (((U16*)"\xEE\x95\x98\x98\xF6\x4E\x9F\x53\xE0\x56\x0\x0") /*L"问题件原因"*/));
     ADD_EDIT_ITEM(g_pOtherProblem,100,IMM_INPUT_TYPE_SENTENCE);    
@@ -1642,9 +1705,10 @@ int OnQinYiSelMainEntry(S32 qinyi_app_menu_sel)
 
 void QinYiAppEntry()
 {
+    StartQyAsySendThread();
     ShowQinYiMenu(NULL,g_strMainEntry,NULL,sizeof(g_strMainEntry)/sizeof(U8 * ),OnQinYiSelMainEntry, NULL);
 }
-
+ 
 U32 CalcLocal(void);
 int OnQinYiSelMainMenu(int qinyi_app_menu_sel)
 {
@@ -1731,6 +1795,8 @@ int QyCheckPassword()
 }
 
 
+#if  0 //BT_DEBUG
+
 U16 g_sBtFile[]= {L"C:\\Received\\AppsEntry.bin"};
 
 int LoadBtFile(void)
@@ -1757,7 +1823,7 @@ int LoadBtFile(void)
     }
     return 0;    
 }
-
+#endif
 void InitMenuStr(void)
 {
     InitStrTble(g_strMainMenu, QYMAX_MENU_MAIN_ITEMS);
@@ -1768,11 +1834,10 @@ void InitMenuStr(void)
     InitStrTble(g_strQuery,QYMAX_MENU_QUERY_ITEM);
     InitStrTble(g_strProblemList,QYMAX_MENU_PROBLEM_ITEM);
 
-}
+} 
 
 
 U32 g_R9Val;
-
 
 void QinYiAppMain(void)
 {           
@@ -1786,7 +1851,7 @@ void QinYiAppMain(void)
         return;
 #endif    
 
-    g_SettingProf = LoadQySetting(); 
+    LoadQySetting(g_SettingProf); 
     InitMenuStr();
     
     ShowQinYiMenu(NULL,g_strMainMenu,NULL,QYMAX_MENU_MAIN_ITEMS,OnQinYiSelMainMenu, NULL);

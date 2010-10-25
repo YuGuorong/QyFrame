@@ -1,137 +1,197 @@
+#define QY_MODULE     0x3
 #include "QinYiCommon.h"
 
 #define MAX_CMD_BUFF_LEN  1024
 
+#define ANY_SIZE  1
 
-void QyAppendCmdItem(U16 *strParam);
-
-
-
-U16 *g_pCmdPtr = NULL; 
-U16 *g_pCmdCurPtr;
-int g_cmdLen;
-void (*g_QyCmdFinish)(int ret);
-
-void ResetQyProtocol()
+typedef struct tag_nob //net object
 {
-    if( g_QyCmdFinish ) g_QyCmdFinish = NULL;
-    if( g_pCmdPtr ) 
-    {
-        QyFree(g_pCmdPtr);
-        g_pCmdPtr = NULL;
-    }
-    g_cmdLen = 0;
-}
+    U16   type;   
+    U16   StartTime;
+    U16   Timeout;
+    U16   nPort;
+    int   cmdLen;
+    U16 * pCmdCurPtr;
+    U16 * pBufEnd;
+    int  (*pFnxCmdDone)(int ret);          
+    U16   CmdBuf [ANY_SIZE]; 
+}NOB, * LPNOB; 
 
-int QyAppendTime()
-{
-    MYTIME syst;
-    GetDateTime(&syst);
-    kal_wsprintf((U16 *)g_pCmdCurPtr, "`%d%02d%02d%02d%02d%02d", syst.nYear, syst.nMonth, syst.nDay, syst.nHour, syst.nMin, syst.nSec); 
-    g_pCmdCurPtr += 15;
-    return 14;
-}
+typedef void * HCMD;
+
  
-int QyInitialComamnd(int cmd, int req, int maxlen)
+void QyAppendCmdItem(HCMD  hcmd, U16 *strParam);
+void PostToSystemNob(void * nob);
+void QyAsnchTaskEntry(void);
+
+
+
+
+int g_CmdType;
+
+
+int QyAppendTime(LPNOB  pNob)
 {
-    ResetQyProtocol();
-    g_cmdLen = ( maxlen ==0 )? MAX_CMD_BUFF_LEN : maxlen ; 
+    if( pNob )
+    {
+        MYTIME syst;
+        GetDateTime(&syst);
+        kal_wsprintf((U16 *)pNob->pCmdCurPtr, "`%d%02d%02d%02d%02d%02d", syst.nYear, syst.nMonth, syst.nDay, syst.nHour, syst.nMin, syst.nSec); 
+        pNob->pCmdCurPtr += 15;
+        return 14;
+    }
+    return 0;
+}
 
-    g_pCmdPtr = QyMalloc(g_cmdLen);
 
-    if( g_pCmdPtr == NULL) 
+HCMD QyInitialComamnd(int cmd, int req, int maxlen)
+{
+    LPNOB  pNob = NULL;
+    maxlen = ( maxlen ==0 )? MAX_CMD_BUFF_LEN : ( (maxlen +4 ) & (~4)); 
+
+    pNob = (LPNOB)QyMalloc(sizeof( NOB ) + maxlen);
+
+    if( pNob == NULL) 
         return 0;
 
-    memset(g_pCmdPtr, 0, g_cmdLen);
+    memset(pNob, 0, (sizeof( NOB ) + maxlen));
     
-    kal_wsprintf(((U16 *)g_pCmdPtr)+9, "%4d`%02d00", cmd, req); 
-    g_pCmdCurPtr = g_pCmdPtr + 18;
+    pNob->pBufEnd = (U16 *)((U8 *)pNob->CmdBuf+maxlen);
+    
+    
+    kal_wsprintf(((U16 *)pNob->CmdBuf)+9, "%4d`%02d00", cmd, req); 
+    pNob->pCmdCurPtr = pNob->CmdBuf + 18;
 
-    QyAppendCmdItem(g_SettingProf->user_info.name);
-    QyAppendTime();
+    QyAppendCmdItem(pNob, g_SettingProf->user_info.name);
+    QyAppendTime(pNob);
 
-    return 16;
+    return pNob;
 }
 
-void QyAppendItem(U16 *strParam, U16 spit)
+void QyAppendItem(HCMD hcmd, U16 *strParam, U16 spit)
 {
-    if( g_pCmdPtr )
+    LPNOB  pNob = (LPNOB)hcmd;
+    if(pNob && pNob->pCmdCurPtr )
     {
-        kal_wsprintf((U16 *)(g_pCmdCurPtr), "%c%w",spit, strParam); 
-        g_pCmdCurPtr += kal_wstrlen(strParam) + 1;
+        kal_wsprintf((U16 *)(pNob->pCmdCurPtr), "%c%w",spit, strParam); 
+        pNob->pCmdCurPtr += kal_wstrlen(strParam) + 1;
     }    
 }
 
-void QyAppendCmdItem(U16 *strParam)
+void QyAppendCmdItem(HCMD hcmd, U16 *strParam)
 {
-    QyAppendItem(strParam, L'`');
+    QyAppendItem(hcmd,strParam, L'`');
 }
 
 
-void QyAppendParmItem(U16 *strParm)
+void QyAppendParmItem(HCMD hcmd,U16 *strParm)
 {
-    QyAppendItem(strParm, L'\t');
+    QyAppendItem(hcmd,strParm, L'\t');
 }
 
-void QyAppendCmdInt(int val, U16 spit)
+void QyAppendCmdInt(HCMD hcmd,int val, U16 spit)
 {
-    if( g_pCmdPtr )
+    LPNOB  pNob = (LPNOB)hcmd;
+    if(pNob && pNob->pCmdCurPtr )
     {
-        kal_wsprintf((U16 *)(g_pCmdCurPtr), "%c%08d",spit, val); 
-        g_pCmdCurPtr = g_pCmdCurPtr + kal_wstrlen(g_pCmdCurPtr);
+        kal_wsprintf((U16 *)(pNob->pCmdCurPtr), "%c%08d",spit, val); 
+        pNob->pCmdCurPtr = pNob->pCmdCurPtr + kal_wstrlen(pNob->pCmdCurPtr);
     }    
     
 }
 
 
-void QyWrapPackage()
+void QyWrapPackage(HCMD hcmd)
 {
-    if( g_pCmdPtr )
+    LPNOB  pNob = (LPNOB)hcmd;
+    if(pNob && pNob->pCmdCurPtr )
     {
-         int len = (g_pCmdCurPtr - g_pCmdPtr + 1 - 8 )*2;
-         kal_wsprintf(g_pCmdPtr,"%08X", len);
-         g_pCmdPtr[8] = L'`';
-         kal_wsprintf(g_pCmdCurPtr,"`\n");
-         g_cmdLen =(g_pCmdCurPtr - g_pCmdPtr + 2 )*2;
+         int len = (pNob->pCmdCurPtr - pNob->CmdBuf + 1 - 8 )*2;
+         kal_wsprintf(pNob->CmdBuf,"%08X", len);
+         pNob->CmdBuf[8] = L'`';
+         kal_wsprintf(pNob->pCmdCurPtr,"`\n");
+         pNob->cmdLen = (pNob->pCmdCurPtr - pNob->CmdBuf + 2 )*2;
+         //ASSERT( pNob->cmdLen < (pNob->pBufEnd - pNob->CmdBuf)*2)
     }         
 }
 
 
-void QyPackageDone(int ret);
-int Qy_soc_socket_notify(void *inMsg, int Msg);
-int g_SocTimerRet = 0;
-void qy_soc_timeout(void)
+int QySendPackage(HCMD hcmd, int (*f)(int ret), int bBinary )
 {
-    StopTimer(SOCKET_TIMEOUT_TIMER);
-    soc_close(g_qy_socket_id);
-    QyPackageDone(g_SocTimerRet);
-}
-
-int mtk_soc_socket_notify(void *inMsg);
-int QySendPackage( void (*f)(int ret) , int bBinary )
-{
-     int ret = 0;
-    if( g_SettingProf )
+    int ret = 0;
+    LPNOB  pNob = (LPNOB)hcmd;
+    if(pNob && pNob->pCmdCurPtr && g_SettingProf )
     {
         int port = bBinary > 0 ? g_SettingProf->Host_port + 1 : g_SettingProf->Host_port;
-        ret = MtkSocketConnect(g_SettingProf->Host_ip, port, 10, Qy_soc_socket_notify);
-        if( ret  ) 
-            g_QyCmdFinish = f;
+        pNob->nPort = port;
+        pNob->pFnxCmdDone = f;
+        pNob->type = g_CmdType;
+        PostToSystemNob(pNob);
 	}
     return ret;
 }
 
-void QyPackageDone(int ret)
+////////////////////////////////////////////////////////////////////////////////////////////////
+int QyNobSendDone(int ret);
+int Qy_soc_socket_notify(void *inMsg, int Msg);
+int g_SocTimerRet = 0;
+int mtk_soc_socket_notify(void *inMsg);
+void ClearNobQueue(void * nob);
+LPNOB  g_OnGoningNob;
+
+void ResetQyProtocol()
 {
-    kal_prompt_trace(MOD_MMI,"QyPackageDone %d", ret);
-    if( g_QyCmdFinish)
+    StopTimer(SOCKET_TIMEOUT_TIMER);
+    soc_close(g_qy_socket_id);
+    if( g_OnGoningNob ) 
     {
-        g_QyCmdFinish(ret);
-        if( ret <= 0 )
+		ClearNobQueue(g_OnGoningNob);
+        QyFree(g_OnGoningNob);
+    }
+    g_OnGoningNob = NULL;
+    StartTimer(ASYN_TASK,10,QyAsnchTaskEntry);
+}
+
+
+void qy_soc_timeout(void)
+{
+    QyNobSendDone(g_SocTimerRet);
+}
+
+int SendNob(LPNOB pNob)
+{
+    int ret = 0;
+    if( g_OnGoningNob )
+        return -1;
+    if(pNob && pNob->pCmdCurPtr && g_SettingProf )
+    {
+        ret = MtkSocketConnect(g_SettingProf->Host_ip, pNob->nPort, 10, Qy_soc_socket_notify); 
+
+        //return 0 is error, 1 is OK
+        if( ret  ) 
+        {
+            g_OnGoningNob = pNob;
+        }
+        else
+            pNob->pFnxCmdDone(NET_ESTAB_FAIL);
+	}
+    return ret;
+}
+
+int QyNobSendDone(int ret)
+{
+	int retv = 0;
+    kal_prompt_trace(MOD_MMI,"QyNobSendDone %d", ret);
+    if( g_OnGoningNob && g_OnGoningNob->pFnxCmdDone)
+    {
+        retv = g_OnGoningNob->pFnxCmdDone(ret);
+        if( ret <= NET_CLOSE )
         {
             ResetQyProtocol();
         }
     }
+	return retv;
 }
 
     
@@ -151,21 +211,26 @@ int Qy_soc_socket_notify(void *inMsg, int msg)
         break;
     case SOC_READ:
         kal_prompt_trace(MOD_MMI,"SOC_READ");
-        QyPackageDone(1);
+        if( QyNobSendDone(NET_DATA_IN) > 0 )
+        {
+            ResetQyProtocol();
+        }
+            
         g_SocTimerRet = 0;
         /*soc_recv(g_qy_socket_id, g_paBuffer, 256, 0);
         mmi_scan_display_popup((UI_string_type) g_paBuffer, MMI_EVENT_INFO);*/
         break;
     case SOC_CONNECT:
         kal_prompt_trace(MOD_MMI,"SOC_CONNECT %d", soc_notify->result);
-        if( g_pCmdPtr )
+        if( g_OnGoningNob && g_OnGoningNob->CmdBuf )
         {
-            soc_send(g_qy_socket_id,g_pCmdPtr,g_cmdLen, 0);
+            soc_send(g_qy_socket_id,g_OnGoningNob->CmdBuf,g_OnGoningNob->cmdLen, 0);
+            g_SocTimerRet = NET_DATA_TIMOUT;
             StartTimer(SOCKET_TIMEOUT_TIMER,6000,qy_soc_timeout);
         }
         else
         {
-            //QyPackageDone(1);
+            //QyNobSendDone(1);
         }
         
         break;
@@ -174,11 +239,11 @@ int Qy_soc_socket_notify(void *inMsg, int msg)
         soc_close(g_qy_socket_id);
         StopTimer(SOCKET_TIMEOUT_TIMER);
         g_SocTimerRet = 0;
-        QyPackageDone(0);
+        QyNobSendDone(NET_CLOSE);
         break;
 	case SOC_WOULDBLOCK|SOC_EXT_MSG:
-        g_SocTimerRet = -1;
-		StartTimer(SOCKET_TIMEOUT_TIMER,20000,qy_soc_timeout);
+        g_SocTimerRet = NET_DATA_TIMOUT;
+		StartTimer(SOCKET_TIMEOUT_TIMER,40000,qy_soc_timeout);
 		break;
 
     }
@@ -247,7 +312,6 @@ int QySocketConnect( U8 * pIp, int port, int(*fnxCb)(void*))
     if (ret == SOC_SUCCESS)
     {    
         kal_prompt_trace(MOD_MMI,"soc_connect success start sent!!");
-        ret = soc_send(g_qy_socket_id,g_pCmdPtr,g_cmdLen, 0);
         StartTimer(SOCKET_TIMEOUT_TIMER,150000,qy_soc_timeout);
     }
     else if (ret == SOC_WOULDBLOCK)
@@ -381,23 +445,61 @@ int ParseAckPackage(int * pcmd, int * perr, U16 * pack, int len)
 
 void * GetAckHandle( int * pcmd,int * perr, int * pFieldTotal)
 {
+    U16 * pack = NULL;
     int totals;
     int len = QyGetAckLen() + 8;
-    U16 * pack = QyMalloc(len);
-
-    if( pack )
+    if( len > 0 &&  len < 64*1024)
     {
-        memset( pack, 0 , len );
-        QyGetAckData(pack, len-4);
+        pack = QyMalloc(len);
 
-        totals = ParseAckPackage(pcmd, perr, pack+1, len );
+        if( pack )
+        {
+            memset( pack, 0 , len );
+            QyGetAckData(pack, len-4);
 
-        if( pFieldTotal)
-            *pFieldTotal = totals;
+            totals = ParseAckPackage(pcmd, perr, pack+1, len );
+
+            if( pFieldTotal)
+                *pFieldTotal = totals;
+        }
     }
     return pack;
 }
 
+#ifndef offsetof
+#define offsetof(type, mem) ((size_t) ((char*)&((type*)0)->mem - (char*)((type*)0)))
+#endif
+
+int g_tm_offset[][2] = 
+{
+   {4,  offsetof(MYTIME, nYear) }
+  ,{2,  offsetof(MYTIME, nMonth)}
+  ,{2,  offsetof(MYTIME, nDay)  }
+  ,{2,  offsetof(MYTIME, nHour) }
+  ,{2,  offsetof(MYTIME, nMin)  }
+  ,{2,  offsetof(MYTIME, nSec)  }
+};
+    
+int GetAckTime(void *hack, MYTIME * tmack)
+{
+    S32 val, rd, i;
+    U16 tmp ;
+    U16 * ptm = GetFeild(hack, 0, 2);
+    for( i=0 ;i<sizeof(g_tm_offset)/(sizeof(int)*2);i++)
+    {
+        int endp = g_tm_offset[i][0];
+        tmp = ptm[endp];
+        ptm[endp] = 0;
+        mmi_ucs2toi((S8 *)ptm, &val, &rd);
+        if( endp == 4 )
+            *(S16 *)((U32)tmack + g_tm_offset[i][1] )= (S16)val;
+        else if( endp == 2 )
+            *(U8 *) ((U32)tmack + g_tm_offset[i][1] )= (U8)val;            
+        ptm[endp] = tmp;
+        ptm += endp;
+    }
+    return 0;
+}
 
 void FreeAckHandle(void * packHandle)
 {
@@ -438,17 +540,18 @@ U16 * QureyErrorString(int errcode)
 }
 
 //U16 qy_str_login[] =  {L"00000062`1000`0100`01291.001`20100914055503`01291.001\t01`\n"};
-int QySendLoginCmd(U16 * user , U16 * pwd, void (*f)(int ret))
+int QySendLoginCmd(U16 * user , U16 * pwd, int (*f)(int ret))
 {
-    if( QyInitialComamnd(CMD_LOGIN,CMD_LOGIN_REQ,0) )
+    HCMD hcmd;
+    if( (hcmd = QyInitialComamnd(CMD_LOGIN,CMD_LOGIN_REQ,0)) != NULL )
     {
         U16 ver[8];
-        QyAppendCmdItem(user);
-        QyAppendParmItem(pwd);
+        QyAppendCmdItem(hcmd, user);
+        QyAppendParmItem(hcmd, pwd);
         kal_wsprintf(ver,"%000d",QY_APPLICATION_VERSION);
-        QyAppendParmItem(ver);
-        QyWrapPackage();
-        QySendPackage(f, 0);
+        QyAppendParmItem(hcmd, ver);
+        QyWrapPackage(hcmd);
+        QySendPackage(hcmd, f, 0);
         return 1;
     }
     return 0;
@@ -458,18 +561,19 @@ int QySendLoginCmd(U16 * user , U16 * pwd, void (*f)(int ret))
 int QyPrepareSignRecptCmd(U16 * SignName, int totals,QY_RDID * pIds, FuncCmdAck f)
 {
     int i;
-    if( QyInitialComamnd(CMD_SIGN_RECTP,CMD_SRECTP_REQ,(totals*MAX_RDID_LEN+64+QY_USER_MAX_LEN)*2) )
+    HCMD hcmd =  QyInitialComamnd(CMD_SIGN_RECTP,CMD_SRECTP_REQ,(totals*MAX_RDID_LEN+64+QY_USER_MAX_LEN)*2) ;
+    if(hcmd)
     {
         U16 Strrdid[MAX_RDID_LEN+2];
-        QyAppendCmdItem(SignName);
-        QyAppendCmdInt(totals, L'\t');
+        QyAppendCmdItem(hcmd, SignName);
+        QyAppendCmdInt(hcmd, totals, L'\t');
         for( i=0; i<totals; i++)
         {
             mmi_asc_n_to_wcs(Strrdid, (S8*)pIds[i].Rdid, MAX_RDID_LEN+1),
-            QyAppendParmItem(Strrdid);
+            QyAppendParmItem(hcmd, Strrdid);
         }
-        QyWrapPackage();
-        QySendPackage(f, 0);
+        QyWrapPackage(hcmd );
+        QySendPackage(hcmd, f, 0);
         return 1;
     }
     return 0;
@@ -482,7 +586,9 @@ int QyPrepareSignRecptCmd(U16 * SignName, int totals,QY_RDID * pIds, FuncCmdAck 
 //运单号\t
 //问题件原因说明
 //:1004`0100`01291.001`20100925043929`问题件类型  运单总数  问题件单号1  问题件原因  问题件运单号n  空`
-/*14	电话无人接听           1. 电话无人接听
+#if 1
+/*中通
+  14	电话无人接听           1. 电话无人接听
     3	查无此人               2. 查无此人
     1	地址不详               3. 地址不详
     5	拒付到付款             4. 拒付到付款
@@ -492,11 +598,62 @@ int QyPrepareSignRecptCmd(U16 * SignName, int totals,QY_RDID * pIds, FuncCmdAck 
     15	客户要求重新派送       8. 客户要求重新派送
     17	家中无人               9. 家中无人
     16	其他                   10.其他*/
+#define QY_SIZE_PRBLEM_LIST_MAX  23
 
+U8 g_ProblemTextList[][QY_SIZE_PRBLEM_LIST_MAX] = {
+ {("\x31\x0\x2E\x0\x35\x75\xDD\x8B\xE0\x65\xBA\x4E\xA5\x63\x2C\x54\x0\x0") /*L"1.电话无人接听"*/}
+,{("\x32\x0\x2E\x0\xE5\x67\xE0\x65\x64\x6B\xBA\x4E\x0\x0") /*L"2.查无此人"*/}
+,{("\x33\x0\x2E\x0\x30\x57\x40\x57\xD\x4E\xE6\x8B\x0\x0") /*L"3.地址不详"*/}
+,{("\x34\x0\x2E\x0\xD2\x62\xDD\x7E\x30\x52\xD8\x4E\x3E\x6B\x0\x0") /*L"4.拒绝到付款"*/}
+,{("\x35\x0\x2E\x0\xD2\x62\xDD\x7E\xE3\x4E\x36\x65\x27\x8D\x3E\x6B\x0\x0") /*L"5.拒绝代收货款"*/}
+,{("\x36\x0\x2E\x0\xA2\x5B\x37\x62\xD2\x62\x36\x65\x0\x0") /*L"6.客户拒收"*/}
+,{("\x37\x0\x2E\x0\x34\x78\x5F\x63\xF6\x4E\x0\x0") /*L"7.破损件"*/}
+,{("\x38\x0\x2E\x0\xA2\x5B\x37\x62\x81\x89\x42\x6C\xCD\x91\xB0\x65\x3E\x6D\xD1\x53\x0\x0") /*L"8.客户要求重新派发"*/}
+,{("\x39\x0\x2E\x0\xB6\x5B\x2D\x4E\xE0\x65\xBA\x4E\x0\x0") /*L"9.家中无人"*/}
+,{("\x31\x0\x30\x0\x76\x51\xD6\x4E\x0\x0") /*L"10其他"*/}
+};
 const int g_problem_map[]= {16,14,3, 1, 5, 12, 6, 7, 15, 17, 16,11};
+
+#else
+/*
+4         错发件                           1.错发件
+3         查无此人                         2.查无此人
+1         地址不详	                       3.地址不详
+5         拒付到付款                       4.拒付到付款
+13        超区                             5 超区
+6         客户拒收                         6.客户拒收
+7         破损件                           7.破损件
+2         面单脱落                         8.面单脱落
+12        其他                             9.其他
+*/
+#define QY_SIZE_PRBLEM_LIST_MAX  16
+U8 g_ProblemTextList[][QY_SIZE_PRBLEM_LIST_MAX] = {
+  {("\x31\x0\x2E\x0\x19\x95\xD1\x53\xF6\x4E\x0\x0") /*L"1.错发件"*/}
+ ,{("\x32\x0\x2E\x0\xE5\x67\xE0\x65\x64\x6B\xBA\x4E\x0\x0") /*L"2.查无此人"*/}
+ ,{("\x33\x0\x2E\x0\x30\x57\x40\x57\xD\x4E\xE6\x8B\x0\x0") /*L"3.地址不详"*/}
+ ,{("\x34\x0\x2E\x0\xD2\x62\xD8\x4E\x30\x52\xD8\x4E\x3E\x6B\x0") /*L"4.拒付到付款"*/}
+ ,{("\x35\x0\x20\x0\x85\x8D\x3A\x53\x0\x0") /*L"5 超区"*/}
+ ,{("\x36\x0\x2E\x0\xA2\x5B\x37\x62\xD2\x62\x36\x65\x0\x0") /*L"6.客户拒收"*/}
+ ,{("\x37\x0\x2E\x0\x34\x78\x5F\x63\xF6\x4E\x0\x0") /*L"7.破损件"*/}
+ ,{("\x38\x0\x2E\x0\x62\x97\x55\x53\x31\x81\x3D\x84\x0\x0") /*L"8.面单脱落"*/}
+ ,{("\x39\x0\x2E\x0\x76\x51\xD6\x4E\x0\x0") /*L"9.其他"*/}
+};
+const int g_problem_map[]= {12,4,3,1,5,13,6,7,2,12};
+#endif 
+const int g_ProblemTextItemCount = sizeof(g_ProblemTextList)/QY_SIZE_PRBLEM_LIST_MAX ;
+
+U8 * GetProblemTextByIndex(int index)
+{
+    if( index < sizeof(g_ProblemTextList)/QY_SIZE_PRBLEM_LIST_MAX )
+    {
+        return g_ProblemTextList[index];
+    }
+    return NULL;
+}
 
 int QyPrepareIssueCmd(PROBLEM_JOUNOR * pProblemJouner, int totals,QY_RDID * pIds, FuncCmdAck f)
 {
+    HCMD hcmd;
     int i = kal_wstrlen(pProblemJouner->strOther);
     U16 Strrdid[MAX_RDID_LEN+2];
     U16 strProblemID[4];
@@ -506,8 +663,10 @@ int QyPrepareIssueCmd(PROBLEM_JOUNOR * pProblemJouner, int totals,QY_RDID * pIds
         return 0; 
     
     kal_wsprintf(strProblemID,"%d",g_problem_map[idx] );
+
+    hcmd =  QyInitialComamnd(CMD_PROBLEM, CMD_SRECTP_REQ,(totals*MAX_RDID_LEN+64+QY_USER_MAX_LEN)*2+(i*2+16));
     
-    if( QyInitialComamnd(CMD_PROBLEM, CMD_SRECTP_REQ,(totals*MAX_RDID_LEN+64+QY_USER_MAX_LEN)*2)+(i*2+16) )
+    if( hcmd )
     {
         
         //QyAppendCmdInt(totals, L'\t');//运单总数 
@@ -516,22 +675,22 @@ int QyPrepareIssueCmd(PROBLEM_JOUNOR * pProblemJouner, int totals,QY_RDID * pIds
             mmi_asc_n_to_wcs(Strrdid, (S8*)pIds[i].Rdid, MAX_RDID_LEN+1);
             if( i == 0 )
             {
-                QyAppendCmdItem(Strrdid);
-                QyAppendParmItem(strProblemID);//问题件类型
+                QyAppendCmdItem(hcmd, Strrdid);
+                QyAppendParmItem(hcmd, strProblemID);//问题件类型
             }
             else
             {
-                QyAppendParmItem(Strrdid);
-                QyAppendParmItem(L" ");
+                QyAppendParmItem(hcmd, Strrdid);
+                QyAppendParmItem(hcmd, L" ");
             }
         }
             
         if(pProblemJouner->strOther[0] )
-            QyAppendParmItem(pProblemJouner->strOther);
+            QyAppendParmItem(hcmd, pProblemJouner->strOther);
         else
-            QyAppendParmItem(L" ");
-        QyWrapPackage();
-        QySendPackage(f, 0);
+            QyAppendParmItem(hcmd, L" ");
+        QyWrapPackage(hcmd); 
+        QySendPackage(hcmd, f, 0);
         return 1;
     }
     return 0;
@@ -546,7 +705,7 @@ TASK_HEADER * CreateTask(QYFILE_TYPE ftype, int nInitalIdMax)
     {
         if(nInitalIdMax == 0 ) nInitalIdMax = DEF_ID_MAX_BUFF;
         
-        pNewTask = (TASK_HEADER *)QyMalloc(sizeof(TASK_HEADER) );
+        pNewTask = (TASK_HEADER *)QyMalloc(sizeof(TASK_HEADER) ); 
         memset( pNewTask, 0 , sizeof(TASK_HEADER));
         if( pNewTask )
         {
@@ -726,18 +885,20 @@ static int FindQyTaskFile(QYFILE_TYPE ftype,  int bsave)
 int  SaveTask(TASK_HEADER * ptask)
 {
     int ret = ERR_FILE_NOT_OPEN;
-    int fs_h  = FindQyTaskFile(ptask->filetype, 1);
+    int fs_h  ;
+    if( ptask == NULL ) return ERR_INVLD_PARMA;
+    fs_h = FindQyTaskFile(ptask->filetype, 1);
     if( fs_h > 0  )
     {
         U32 wdb = 0;
         UINT fsStartPos = FS_Seek(fs_h, 0, FS_FILE_END);
         
-        ptask->tsksize = sizeof(TASK_HEADER)+ptask->LenJunor+sizeof(QY_RDID)*ptask->totals;
+        ptask->tsksize = sizeof(TASK_HEADER)+ptask->LenJunor+sizeof(QY_RDID)*ptask->totals-8;
         mmi_asc_n_to_wcs(ptask->taskname, (S8*)ptask->pRdId[0].Rdid, MAX_RDID_LEN+1);//mmi_asc_n_to_ucs2
 
         ret = ERR_FILE_WRITING;
-        FS_Write(fs_h, ptask, sizeof(TASK_HEADER), &wdb);    
-        if( wdb != sizeof(TASK_HEADER) ) goto endf;
+        FS_Write(fs_h, ptask, sizeof(TASK_HEADER)-8, &wdb);    // sub 8 means not store pointers
+        if( wdb != sizeof(TASK_HEADER)-8 ) goto endf;
         
         FS_Write(fs_h, ptask->pJunor, ptask->LenJunor, &wdb);
         if( wdb != ptask->LenJunor ) goto endf;
@@ -828,8 +989,8 @@ TASK_HEADER *  LoadTask(int ftype, int index)
             if( rd == 4)
             {
                 ptask = CreateTask(ftype, (offset)/sizeof(QY_RDID));
-                FS_Read(fsh, &ptask->filetype, sizeof(TASK_HEADER)-4, &rd);
-                if( rd < sizeof(TASK_HEADER)-4) 
+                FS_Read(fsh, &ptask->filetype, (sizeof(TASK_HEADER)-4-8), &rd);  // sub 8 means not store pointers. 4 is read task size already
+                if( rd < (sizeof(TASK_HEADER)-4-8)) 
                 {
                     FreeTask(ptask);
                     return NULL;
@@ -876,6 +1037,14 @@ typedef struct headif
     U32    tsksize;
     U16    filetype;
 }QYF_NODE;
+
+void ReStartQyAsySendThread(void);
+
+TASK_HEADER * g_pAsynTask; 
+U32 g_pAsynTaskOffset;
+U16 g_pAsynTaskExtChar;
+
+
 
 int DumpTaskFile(int fsh, int index)
 {
@@ -948,63 +1117,6 @@ void FreeDump(void )
 }
 
 
-void QyAsySendThreadEntry(void);
-
-int g_AsySendThreadStatus = QYTSK_NOT_RUN;
-TASK_HEADER * g_pAsynTask; 
-U32 g_pAsynTaskOffset;
-U16 g_pAsynTaskExtChar;
-
-int GetAsynchoThreadStatus()
-{
-    return g_AsySendThreadStatus;
-}
-
-void SetQyAsySendThreadStatus(int status)
-{
-    g_AsySendThreadStatus = status;
-}
-
-void ReStartQyAsySendThread(void)
-{
-    QYTHREAD_STATUS status= GetAsynchoThreadStatus();
-    if(status & QYTSK_TERMINATE)
-        return;
-    g_AsySendThreadStatus &= ~QYTSK_SENDING;
-    if( g_AsySendThreadStatus == QYTSK_RUNNING )
-        StartTimer(ASYN_SEND_TASK,10,QyAsySendThreadEntry);
-}
-
-void StartQyAsySendThread(void)
-{
-    QYTHREAD_STATUS status= GetAsynchoThreadStatus();
-    if( status== QYTSK_NOT_RUN)
-        g_pAsynTask = NULL;
-    else if( status == QYTSK_RUNNING )
-        return;
-    else if(status == QYTSK_TERMINATE)
-        return;
-    
-    SetQyAsySendThreadStatus( QYTSK_RUNNING );    
-    StartTimer(ASYN_SEND_TASK,g_SettingProf->AutoConnectTime*1000,QyAsySendThreadEntry);
-}
-
-void SuspendQyAsySendThread(void)
-{
-    SetQyAsySendThreadStatus( QYTSK_SUSPEND|GetAsynchoThreadStatus());
-}
-
-void ResumeQyAsySendThread(void)
-{
-    SetQyAsySendThreadStatus( ~QYTSK_SUSPEND & g_AsySendThreadStatus);
-}
-
-void TerminalQyAshSendThread(void)
-{
-    SetQyAsySendThreadStatus( QYTSK_TERMINATE );
-}
-
-
 int FindAsynTask(int fsh,QYF_NODE *node)
 {
      UINT rd;
@@ -1024,7 +1136,7 @@ int FindAsynTask(int fsh,QYF_NODE *node)
 }
 
 const int g_cmdReqAck[] = {CMD_RECIVE, CMD_SIGN_RECTP, CMD_PROBLEM};
-void OnFishAsynSend(int ret)
+int OnFishAsynSend(int ret)
 {
     int fsh = 0;
     if( ret > 0 )
@@ -1056,8 +1168,7 @@ void OnFishAsynSend(int ret)
     g_pAsynTask = NULL;
     if( ret > 0 && fsh > 0)
         ReStartQyAsySendThread();
-    else
-        TerminalQyAshSendThread();
+    return 1;
 }
  
 
@@ -1082,7 +1193,7 @@ int AsynSendTask(QYFILE_TYPE ftype)
                     if( g_pAsynTask ) QyFree(g_pAsynTask);
                     
                     g_pAsynTask = CreateTask(ftype, (node.tsksize)/sizeof(QY_RDID));
-                    FS_Read(fsh, g_pAsynTask->taskname,sizeof(TASK_HEADER)-6, &rlen );
+                    FS_Read(fsh, g_pAsynTask->taskname,sizeof(TASK_HEADER)-6-8, &rlen );
                     FS_Read(fsh, g_pAsynTask->pJunor,g_pAsynTask->LenJunor, &rlen );
                     FS_Read(fsh, g_pAsynTask->pRdId, g_pAsynTask->totals*sizeof(QY_RDID), &rlen);
                     //read header
@@ -1094,8 +1205,9 @@ int AsynSendTask(QYFILE_TYPE ftype)
                         g_pAsynTaskExtChar = index;
                         g_pAsynTask->tsksize = node.tsksize;
                         g_pAsynTask->filetype = node.filetype;
-                        SetQyAsySendThreadStatus(QYTSK_SENDING|GetAsynchoThreadStatus());
-                        SendTask(g_pAsynTask, 0, OnFishAsynSend);                        
+                        g_CmdType = 1;
+                        SendTask(g_pAsynTask, 0, OnFishAsynSend);   
+                        g_CmdType = 0;
                     }                    
                     ret = 1;
                 }
@@ -1108,25 +1220,117 @@ int AsynSendTask(QYFILE_TYPE ftype)
     return ret;
 }
 
-void QyAsySendThreadEntry(void)
+
+
+
+int g_AsySendThreadStatus = QYTSK_NOT_RUN;
+
+
+void ReStartQyAsySendThread(void)
 {
-    StartTimer(ASYN_SEND_TASK,g_SettingProf->AutoConnectTime*1000,QyAsySendThreadEntry);
-    if( QYTSK_RUNNING != GetAsynchoThreadStatus() ) 
-        return;
+    g_AsySendThreadStatus = QYTSK_RUNNING;
+}
+
+void StartQyAsySendThread(void)
+{
+    g_AsySendThreadStatus = QYTSK_RUNNING;
+    StartTimer(ASYN_TASK,g_SettingProf->AutoConnectTime*1000,QyAsnchTaskEntry);
+}
+
+void SuspendQyAsySendThread(void)
+{
+    g_AsySendThreadStatus = QYTSK_SUSPEND;
+}
+
+void ResumeQyAsySendThread(void)
+{
+    g_AsySendThreadStatus = QYTSK_RUNNING;   
+}
+
+void ResetAsySendTimer(void)
+{
+    StartTimer(ASYN_TASK,g_SettingProf->AutoConnectTime*1000,QyAsnchTaskEntry);
+}
+
+
+void QyAsySendReadyTask(void)
+{
     if( AsynSendTask(QYF_RECIVE) == 0 )
     {
         if( AsynSendTask(QYF_SIGN) == 0 )
         {
             if( AsynSendTask(QYF_PROBLEM) == 0 )
             {
-                SetQyAsySendThreadStatus(QYTSK_NOT_RUN);
-                StopTimer(ASYN_SEND_TASK);
                 return;
             }
         }
     }  
 }
 
+
+LPNOB g_NobQueu[3][2];
+void ClearNobQueue(void * nob)
+{
+    LPNOB  pNob = (LPNOB)nob;
+    if(pNob && pNob->pCmdCurPtr )
+    {
+        g_NobQueu[pNob->type][0] = g_NobQueu[pNob->type][1];
+        g_NobQueu[pNob->type][1] = NULL;
+    }
+
+}
+
+void PostToSystemNob(void * nob)
+{
+    LPNOB  pNob = (LPNOB)nob;
+    if(pNob && pNob->pCmdCurPtr && g_SettingProf )
+    {
+        if( g_NobQueu[pNob->type][0] == NULL )
+            g_NobQueu[pNob->type][0] = pNob;
+        else
+            g_NobQueu[pNob->type][1] = pNob;
+        if( pNob->type == 0 )
+            StartTimer(ASYN_TASK,10,QyAsnchTaskEntry);
+    }
+}
+
+
+void QyAsnchTaskEntry(void)
+{
+    StartTimer(ASYN_TASK,g_SettingProf->AutoConnectTime*1000,QyAsnchTaskEntry);
+    if( g_OnGoningNob )//Current net resource avlibal
+    {
+        return ;
+    }
+        
+    if( g_NobQueu[0][0]) //Check Current request
+    {
+        kal_prompt_trace(MOD_MMI, "Start Send ui task");
+        SendNob(g_NobQueu[0][0]);
+        return ;
+    }
+
+    //Check ready task to send
+    if( g_AsySendThreadStatus == QYTSK_RUNNING )
+    {
+        QyAsySendReadyTask();
+        if( g_NobQueu[1][0])
+        {
+            kal_prompt_trace(MOD_MMI, "Start asynch task");
+            SendNob(g_NobQueu[1][0]);
+            return ;
+        }
+    }
+
+
+    //Check Messge to load
+}
+
+
+void CancelNet(void)
+{
+    QyNobSendDone(-4);
+}
 
 #define TEMP_BUFF_SIZE (0x10000*4 )
 /*
@@ -1162,11 +1366,11 @@ U16 g_szExeBinF[] = {L"AppsEntry.bin"};
 U16 g_szDownBinF[] = {L"AppsEntryx.bin"};
 U16 g_szDecBinF[] = {L"AppsEntryD.bin"};
 
-void FreeQyUpdateRes(void)
+void FreeQyUpdateRes(int upRet)
 {
     if( g_pUpgradeInfo && g_pUpgradeInfo->bPopup)
     {
-        OnUiUpdateEnd(g_pUpgradeInfo->bPopup);
+        OnUiUpdateEnd(g_pUpgradeInfo->bPopup, upRet);
         g_pUpgradeInfo->bPopup = 0;      
         QyFree(g_pUpgradeInfo->pbuf);
         QyFree(g_pUpgradeInfo);
@@ -1175,8 +1379,24 @@ void FreeQyUpdateRes(void)
     }
    
 }
-void QyOnUpdateAck(int ret)
+
+void OnUpdateProgOK()
 {
+    U16 dstf[64], srcf[64];
+    GetQyPathFile(dstf,QY_PROG, g_szExeBinF);
+    GetQyPathFile(srcf,QY_PROG, g_szDownBinF);
+    FS_Delete(dstf);
+    FS_Rename(srcf,dstf); 
+    g_SettingProf->ProgFLen = g_pUpgradeInfo->fsize;
+    g_SettingProf->ProgRamSize = g_pUpgradeInfo->ramsize;
+    memset(g_SettingProf->user_info.pwd,0, sizeof(U16)*QY_PSWD_MAX_LEN);  //Clear PWD force to login next log
+    SaveQySettingProfile(g_SettingProf);
+    
+}
+
+int QyOnUpdateAck(int ret)
+{
+    int update_ret = -1;
     if( ret > 0 )
     {  
         //int fsh = 0;
@@ -1184,25 +1404,17 @@ void QyOnUpdateAck(int ret)
         int ngot;
         U8 * g_temp = &g_pUpgradeInfo->pbuf[g_pUpgradeInfo->fwrite];
         
+		do
         {
             g_temp = &g_pUpgradeInfo->pbuf[g_pUpgradeInfo->fwrite];
             ngot = QyGetAckData(g_temp,  TEMP_BUFF_SIZE );
             
             if( ngot > 0 )
             {
-                /*
-                UINT wt;
-                ntotal +=  ngot; 
-				if (fsh <= 0 )
-					fsh = OpenQyFile(QY_PROG, g_szDownBinF, FS_READ_WRITE);
-                FS_Seek(fsh, 0, FS_FILE_END);
-                FS_Write(fsh, &g_temp, ngot ,&wt);
-                FS_Commit(fsh);*/
-
                 if( g_pUpgradeInfo )
                     g_pUpgradeInfo->fwrite += ngot;//wt;
             }
-        }
+        }while( 0);// ngot);
         
 
         kal_prompt_trace(MOD_MMI, "Read package, %x",g_pUpgradeInfo->fwrite);
@@ -1210,8 +1422,7 @@ void QyOnUpdateAck(int ret)
         //FS_Close(fsh);
         //QyFree(g_temp);
         StartTimer(SOCKET_TIMEOUT_TIMER,150000,qy_soc_timeout);    
-      //  if( g_pUpgradeInfo->fsize < g_pUpgradeInfo->fwrite  )
-            return;
+        return 0;
 
     }
     else if( ret == 0 )
@@ -1245,11 +1456,9 @@ void QyOnUpdateAck(int ret)
                 
                 if( wd == (UINT)wlen ) // && VerifyOK)
                 {
-                    U16 dstf[64], srcf[64];
-                    GetQyPathFile(dstf,QY_PROG, g_szExeBinF);
-                    GetQyPathFile(srcf,QY_PROG, g_szDecBinF);
-                    FS_Delete(dstf);
-                    FS_Rename(srcf, dstf);
+                    g_SettingProf->ProgFLen = wlen;
+                    OnUpdateProgOK();
+                    update_ret = 0;
                 }
                 
                 QyFree(buff);
@@ -1259,33 +1468,35 @@ void QyOnUpdateAck(int ret)
         else
         {
             //if(verifyOK)
-            U16 dstf[64], srcf[64];
-            GetQyPathFile(dstf,QY_PROG, g_szExeBinF);
-            GetQyPathFile(srcf,QY_PROG, g_szDownBinF);
-            FS_Delete(dstf);
-            FS_Rename(srcf,dstf); 
+            if( g_pUpgradeInfo->fsize <= g_pUpgradeInfo->fwrite )
+            {
+                OnUpdateProgOK();
+                update_ret = 0;
+            }
         }
         
     }
     //StartTimer(SOCKET_TIMEOUT_TIMER,500,FreeQyUpdateRes);    
-    FreeQyUpdateRes();
+    FreeQyUpdateRes(update_ret);
+    return 1;
     
 }
 
 
-int QySendUpdateSwCmd( void (*f)(int ret), U16 * pver)
+int QySendUpdateSwCmd( int (*f)(int ret), U16 * pver)
 {
-    if( QyInitialComamnd(CMD_UPDATESW,CMD_QUERYUPDATE_REQ,0) )
+    HCMD hcmd = QyInitialComamnd(CMD_UPDATESW,CMD_QUERYUPDATE_REQ,0);
+    if( hcmd )
     {
-		QyAppendCmdItem(pver);
-        QyWrapPackage();
-        QySendPackage(f, 1);
+		QyAppendCmdItem(hcmd, pver);
+        QyWrapPackage(hcmd );
+        QySendPackage(hcmd, f, 1);
         return 1;
     }
     return 0;
 }
 
-int QyBeginUpdatePackage(void (*f)(int ), U16 * pver)
+int QyBeginUpdatePackage(int (*f)(int ), U16 * pver)
 {
     StopTimer(SOCKET_TIMEOUT_TIMER);
     soc_close(g_qy_socket_id);        
@@ -1301,7 +1512,7 @@ const U16 g_CompressCode[][5] = { {L"NONE"},{L"LZSS"}};
 
 
 
-void QyOnQueryUpdateAck(int ret)
+int QyOnQueryUpdateAck(int ret)
 {
     if( ret > 0 )
     {
@@ -1329,7 +1540,7 @@ void QyOnQueryUpdateAck(int ret)
             }
 
             if( bCompress == -1 )
-                return ;
+                return 1 ;
 
             GetFieldInt(hack, 0, 2, (U32 *)&ver) ;
             if ( ver != -1 && ver > VER_PROG )
@@ -1357,19 +1568,19 @@ void QyOnQueryUpdateAck(int ret)
         else
         {
         }
-        FreeAckHandle(hack);
-        
-            
+        FreeAckHandle(hack);            
     }
+    return 1;
 }
 
-int QySendQueryUpdateCmd( void (*f)(int ret), U16 * pver)
+int QySendQueryUpdateCmd( int (*f)(int ret), U16 * pver)
 {
-    if( QyInitialComamnd(CMD_QUERYUPDATE,CMD_QUERYUPDATE_REQ,0) )
+    HCMD hcmd = QyInitialComamnd(CMD_QUERYUPDATE,CMD_QUERYUPDATE_REQ,0);
+    if( hcmd )
     {
-		QyAppendCmdItem(pver);
-        QyWrapPackage();
-        QySendPackage(f, 0);
+		QyAppendCmdItem(hcmd, pver);
+        QyWrapPackage(hcmd );
+        QySendPackage(hcmd, f, 0);
         return 1;
     }
     return 0;
