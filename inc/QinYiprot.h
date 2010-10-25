@@ -8,13 +8,19 @@ typedef U16         UI_audio_ID_type;
 typedef kal_uint16  nvram_lid_enum;
 typedef MYTIME      UI_time;
 typedef void (*pfncScanDone)(U16 *strcode);
+//typedef void (*PsIntFuncPtr)(void *rsp);
+typedef void (*QyFocusFnx)(int wndType, U16 srcid);
+
 
 #ifndef UpdateStatusIcons
 #define ShowStatusIcon          wgui_status_icon_show_status_icon
 #define HideStatusIcon          wgui_status_icon_hide_status_icon
 #define UpdateStatusIcons       wgui_status_icon_update_status_icons
 #endif
- 
+
+#ifndef MYQUEUE
+#define MYQUEUE         ilm_struct
+#endif
 
 // Add export interface here. just declare prototype only, and then regenerate other headers
 
@@ -47,7 +53,7 @@ extern "C" {
     S32 mmi_wcsicmp(const U16 *str_src, const U16 *str_dst);
     S32 mmi_wcsnicmp(const U16 *str_src, const U16 *str_dst, U32 count);
 
-    void *FuncQyMalloc(unsigned int size);
+    void * FuncQyMalloc(unsigned int size, unsigned short MOD, unsigned short line);
     void FuncQyFree(void *ptr);
 
 
@@ -352,6 +358,30 @@ extern "C" {
     void SetCategory111RightSoftkeyFunction(void (*f) (void), MMI_key_event_type k);
     void wgui_inputs_register_validation_func(void (*f) (U8 *, U8 *, S32));
     int MtkSocketConnect( U8 * pIp, int port, int acount_id, int(*fnxCb)(void*, int));
+    void FuncQyCheckHeap(void);
+    void SetDateTimeEx(void * t);
+    void mmi_frm_clear_protocol_event_handler(U16 eventID, PsIntFuncPtr funcPtr);
+    void mmi_msg_send_ext_queue(MYQUEUE *message);
+    void *mmi_construct_msg_local_para_int(U16 size, S8* file_ptr, U32 line);
+    
+    void GPIO_ModeSetup(kal_uint16 pin, kal_uint16 conf_dada);
+    void GPIO_InitIO(char direction, char port);
+    char GPIO_ReadIO(char port);
+    void GPIO_WriteIO(char data, char port);
+    
+    void UART_SetOwner(UART_PORT port, module_type ownerid);
+    kal_bool UART_Open(UART_PORT port, module_type ownerid);
+    void UART_Close(UART_PORT port, module_type ownerid);
+    void UART_SetBaudRate(UART_PORT port, UART_baudrate baud_rate, module_type ownerid);
+    void UART_SetDCBConfig(UART_PORT port, UARTDCBStruct *UART_Config, module_type ownerid);
+    void UART_ReadDCBConfig(UART_PORT port, UARTDCBStruct *DCB);
+    kal_uint16 UART_GetBytes(UART_PORT port, kal_uint8 *Buffaddr, kal_uint16 Length, kal_uint8 *status, module_type ownerid);
+    kal_uint16 UART_PutBytes(UART_PORT port, kal_uint8 *Buffaddr, kal_uint16 Length, module_type ownerid);
+    kal_uint16 UART_SendData(UART_PORT port, kal_uint8 *Buffaddr, kal_uint16 Length,kal_uint8 mode,kal_uint8 escape_char, module_type ownerid );
+
+    kal_uint8 L1SM_GetHandle(void);
+    void L1SM_SleepEnable(kal_uint8 handle);
+    void L1SM_SleepDisable(kal_uint8 handle);
 
     //Gloabal variables here
     int Globalbase                      =    GLOBAL_BASE,    
@@ -369,7 +399,13 @@ extern "C" {
     const U16 * pIndexIconsImageList    =    &gIndexIconsImageList[0],
     U8 *  pcurrentHighlightIndex        =    &currentHighlightIndex,
     void * gp_inline_items              =    &wgui_inline_items[0],
-    void * pextern                      =    &g_pext 
+    void * pextern                      =    &g_pext,
+    U8 * pLargeHeap                     =    &g_QyHeapBuff[0],
+
+    QyFocusFnx * pFnxQyFocus            =    &g_QinYiFnxOnfocus,
+    
+
+     
 
 #ifdef __cplusplus
 }

@@ -234,6 +234,30 @@
 	SetCategory111RightSoftkeyFunction,\
 	wgui_inputs_register_validation_func,\
 	MtkSocketConnect,\
+	FuncQyCheckHeap,\
+	SetDateTimeEx,\
+	mmi_frm_clear_protocol_event_handler,\
+	mmi_msg_send_ext_queue,\
+	mmi_construct_msg_local_para_int,\
+    \
+	GPIO_ModeSetup,\
+	GPIO_InitIO,\
+	GPIO_ReadIO,\
+	GPIO_WriteIO,\
+    \
+	UART_SetOwner,\
+	UART_Open,\
+	UART_Close,\
+	UART_SetBaudRate,\
+	UART_SetDCBConfig,\
+	UART_ReadDCBConfig,\
+	UART_GetBytes,\
+	UART_PutBytes,\
+	UART_SendData,\
+    \
+	L1SM_GetHandle,\
+	L1SM_SleepEnable,\
+	L1SM_SleepDisable,\
     \
     GLOBAL_BASE,  \
     IDLE_APP_BASE,  \
@@ -250,4 +274,6 @@
     &gIndexIconsImageList[0],  \
     &currentHighlightIndex,  \
     &wgui_inline_items[0],  \
-    &g_pext  \
+    &g_pext,  \
+    &g_QyHeapBuff[0],  \
+    &g_QinYiFnxOnfocus,  \

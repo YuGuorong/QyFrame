@@ -236,6 +236,30 @@ extern QY_ADAPTOR * g_pMtk;
 #define SetCategory111RightSoftkeyFunction 	g_pMtk->qy_SetCategory111RightSoftkeyFunction
 #define wgui_inputs_register_validation_func 	g_pMtk->qy_wgui_inputs_register_validation_func
 #define MtkSocketConnect 	g_pMtk->qy_MtkSocketConnect
+#define FuncQyCheckHeap 	g_pMtk->qy_FuncQyCheckHeap
+#define SetDateTimeEx 	g_pMtk->qy_SetDateTimeEx
+#define mmi_frm_clear_protocol_event_handler 	g_pMtk->qy_mmi_frm_clear_protocol_event_handler
+#define mmi_msg_send_ext_queue 	g_pMtk->qy_mmi_msg_send_ext_queue
+#define mmi_construct_msg_local_para_int 	g_pMtk->qy_mmi_construct_msg_local_para_int
+
+#define GPIO_ModeSetup 	g_pMtk->qy_GPIO_ModeSetup
+#define GPIO_InitIO 	g_pMtk->qy_GPIO_InitIO
+#define GPIO_ReadIO 	g_pMtk->qy_GPIO_ReadIO
+#define GPIO_WriteIO 	g_pMtk->qy_GPIO_WriteIO
+
+#define UART_SetOwner 	g_pMtk->qy_UART_SetOwner
+#define UART_Open 	g_pMtk->qy_UART_Open
+#define UART_Close 	g_pMtk->qy_UART_Close
+#define UART_SetBaudRate 	g_pMtk->qy_UART_SetBaudRate
+#define UART_SetDCBConfig 	g_pMtk->qy_UART_SetDCBConfig
+#define UART_ReadDCBConfig 	g_pMtk->qy_UART_ReadDCBConfig
+#define UART_GetBytes 	g_pMtk->qy_UART_GetBytes
+#define UART_PutBytes 	g_pMtk->qy_UART_PutBytes
+#define UART_SendData 	g_pMtk->qy_UART_SendData
+
+#define L1SM_GetHandle 	g_pMtk->qy_L1SM_GetHandle
+#define L1SM_SleepEnable 	g_pMtk->qy_L1SM_SleepEnable
+#define L1SM_SleepDisable 	g_pMtk->qy_L1SM_SleepDisable
 
 #define GLOBAL_BASE      	(g_pMtk->Globalbase) 
 #define IDLE_APP_BASE      	(g_pMtk->IdleAppResBase) 
@@ -247,5 +271,6 @@ extern QY_ADAPTOR * g_pMtk;
 #define QINYI_TIMER_ID_START      	(g_pMtk->TmIdStart) 
 #define QINYI_TIMER_ID_END      	(g_pMtk->TmIdEnd) 
 #define QINYI_PROG_VERSION      	(g_pMtk->SW_Ver) 
+
 
 

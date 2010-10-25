@@ -1,1 +1,18 @@
 
+---- FuncQyFree Matches (7 in 5 files) ----
+QinYiAdpStruct.h (inc):    void (*qy_FuncQyFree)(void *ptr); 
+QinYiApp.h (inc):#define QyFree            FuncQyFree
+QinYiAppTypes.h (inc):#define QyFree            FuncQyFree
+QinYiAppTypes.h (inc):void FuncQyFree(void *ptr);
+QinYiFnxDef.h (inc):#define FuncQyFree 	g_pMtk->qy_FuncQyFree
+QinYiprot.h (inc):    void FuncQyFree(void *ptr);
+---- g_bQyAuthenticate Matches (9 in 1 files) ----
+QinYiAppSrc.c (src):extern U8 g_bQyAuthenticate ;
+QinYiAppSrc.c (src):        g_bQyAuthenticate = UN_AUTHEN;
+QinYiAppSrc.c (src):    g_bQyAuthenticate = QyLogStatus;
+QinYiAppSrc.c (src):                g_bQyAuthenticate = QY_AUTHEND;
+QinYiAppSrc.c (src):    if( g_bQyAuthenticate != LOCAL_AUTH )
+QinYiAppSrc.c (src):                g_bQyAuthenticate = QY_AUTHEND;
+QinYiAppSrc.c (src):        g_bQyAuthenticate = SERVER_AUTH;
+QinYiAppSrc.c (src):        g_bQyAuthenticate = bServerAuthen;
+QinYiAppSrc.c (src):    if( g_bQyAuthenticate ==  UN_AUTHEN ) 

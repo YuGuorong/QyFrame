@@ -66,6 +66,8 @@ typedef enum
 
 typedef int MMI_ID_TYPE;
 typedef int module_type;
+typedef int sap_type;
+typedef int msg_type;
 typedef U8(*HistoryDelCBPtr) (void *);
 typedef void (*FuncPtr) (void);
 
@@ -114,5 +116,115 @@ typedef enum
 } IDLE_SCR_ID_ENUM;
 
 #define POPUP_SCREENID    (MTK_POPUP_SCREENID+IDLE_APP_BASE)
+/*******************************************************************************
+ * Macros Without Parameters
+ *******************************************************************************/
+#define LOCAL_PARA_HDR \
+   kal_uint8	ref_count; \
+   kal_uint16	msg_len;
+
+#define PEER_BUFF_HDR \
+   kal_uint16	pdu_len; \
+   kal_uint8	ref_count; \
+   kal_uint8   	pb_resvered; \
+   kal_uint16	free_header_space; \
+   kal_uint16	free_tail_space;
+
+
+typedef struct peer_buff_struct {
+   PEER_BUFF_HDR /* XXX!!!. Rex Luo - I don't like the usage */
+} peer_buff_struct;
+
+/*
+ *  Local parameter header
+ *  msg_len : Numbfer of bytes after the ref_count field.
+ *             Length is in bytes.
+ *  ref_count : This is useful if a module wants to retain
+ *               a buffer. Protocol stack module should access
+ *               this field by calling hold_local_para()
+ */
+
+typedef struct local_para_struct {
+   LOCAL_PARA_HDR   /*XXX!!!. Rex Luo - I don't like the usage */
+} local_para_struct;
+
+typedef struct ilm_struct {
+   module_type       src_mod_id;
+   module_type       dest_mod_id;
+   sap_type          sap_id;
+   msg_type          msg_id;
+   local_para_struct *local_para_ptr;
+   peer_buff_struct  *peer_buff_ptr;
+} ilm_struct;
+
+
+/////////////////////////////////////////////////////////////////////////////////
+// Uart 
+
+typedef enum {
+    uart_port1=0,
+    uart_port2,
+    uart_port3,
+    uart_port_irda,
+    uart_port_usb,
+    uart_port_bluetooth,
+    uart_port_swdbg,
+
+    uart_max_port,      
+    uart_port_null = 99	/* a dummy port for those who doesn't use physical port */
+} UART_PORT;
+
+typedef kal_uint32 UART_baudrate;
+
+typedef enum {
+      len_5=5,
+      len_6,
+      len_7,
+      len_8
+} UART_bitsPerCharacter;
+
+typedef enum {
+      sb_1=1,
+      sb_2,
+      sb_1_5
+} UART_stopBits;
+
+typedef enum {
+      pa_none=0,
+      pa_odd,
+      pa_even,
+      pa_space
+} UART_parity;
+
+typedef enum {
+      fc_none=1,
+      fc_hw,
+      fc_sw
+} UART_flowCtrlMode;
+
+typedef struct
+{
+      UART_baudrate                 baud; 
+      UART_bitsPerCharacter         dataBits;
+      UART_stopBits                 stopBits;
+      UART_parity                   parity;
+      UART_flowCtrlMode             flowControl;
+      kal_uint8                     xonChar;
+      kal_uint8                     xoffChar;
+      kal_bool                      DSRCheck;
+} UARTDCBStruct;
+/////////////////////////////////////////////////////////////////////////////////
+// System Date Time
+typedef struct {
+    kal_uint8 rtc_sec;
+    kal_uint8 rtc_min;
+    kal_uint8 rtc_hour;
+    kal_uint8 rtc_day;
+    kal_uint8 rtc_mon;
+    kal_uint8 rtc_wday;
+    kal_uint8 rtc_year;
+} rtc_format_struct;
+
+
 #endif /*QY_MTK_SYS_DEF_H*/
 

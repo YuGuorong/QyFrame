@@ -32,9 +32,14 @@
 #define SOCKET_TIMEOUT_TIMER QINYI_TIMER_ID_START
 #define EXIT_WINDOW_TIMER    (QINYI_TIMER_ID_START+1)
 #define ASYN_SEND_TASK       (QINYI_TIMER_ID_START+2)
+#define ASYN_TASK            (QINYI_TIMER_ID_START+3)
 #define MAX_LIST_TASK_NUM    (300)
 
-#define QyMalloc          FuncQyMalloc
+#ifndef QY_MODULE
+#define QY_MODULE   0
+#endif
+
+#define QyMalloc(sz)      FuncQyMalloc(sz, QY_MODULE, (unsigned short)__LINE__)
 #define QyFree            FuncQyFree
 
 
@@ -89,10 +94,13 @@ typedef struct tag_qysetting
     S32       Host_port;
     S32       AutoConnectTime;
     S32       BinHost_port;
+    S32       ProgFLen;
+    S32       ProgRamSize;
+    S16       UpgradeMode;
 }QY_SETTING_PROF;
 
 
-typedef void (*FuncCmdAck)(int );
+typedef int (*FuncCmdAck)(int );
 typedef enum te_file_type
 {
     QYF_UNKOWN  = 0,
@@ -143,10 +151,10 @@ typedef struct _TASK_HEADER
     U16         taskname[MAX_RDID_LEN+1];
     U16         totals;
     U16         MaxItms;
-    U32         LenJunor;
-    void     *  pJunor;
     MYTIME      GenTime;
     MYTIME      SendTime;
+    U32         LenJunor;
+    void     *  pJunor;
     QY_RDID  *  pRdId;
 }TASK_HEADER;
 
@@ -166,6 +174,14 @@ typedef enum te_QY_ERR
     QY_TRUE =1
 }QY_ERR;
 
+
+typedef enum te_NET_ERROR
+{
+    NET_ESTAB_FAIL = -3,
+    NET_DATA_TIMOUT = -2,
+    NET_CLOSE =  0,
+    NET_DATA_IN = 1 
+}NET_ERR;
 
 typedef struct _QY_ALL_TASKINFO
 {
@@ -187,11 +203,11 @@ const U16 * GetQyDirName(QY_STORAGE_ID dir);
 void InitStorage(void);
 void SetQyLoginAuthenStatus(AUTHEN_TYPE  QyLogStatus);
 
-QY_SETTING_PROF * LoadQySetting(void);
+int LoadQySetting(QY_SETTING_PROF *  pSetting);
 int SaveQySettingProfile(QY_SETTING_PROF * psetting);
 
-int QySendLoginCmd(U16 * user , U16 * pwd, void (*f)(int ret));
-
+int QySendLoginCmd(U16 * user , U16 * pwd, int (*f)(int ret));
+int GetAckTime(void *hack, MYTIME * tmack);
 int QyGetAckLen(void);
 int QyGetAckData(void * buff, int len); 
 void * GetAckHandle( int * pcmd,int * perr, int * pFieldTotal);
@@ -213,10 +229,12 @@ void SuspendQyAsySendThread(void);
 void ResumeQyAsySendThread(void);
 
 U16 * QureyErrorString(int errcode);
+void CancelNet(void);
+void DisableKeyEvent(void);
 
 
 
-void *FuncQyMalloc(unsigned int size);
+void * FuncQyMalloc(unsigned int size, unsigned short MOD, unsigned short line);
 void *FuncQyCalloc(unsigned int nmemb, unsigned int size);
 void FuncQyFree(void *ptr);
 unsigned int FuncQyMallocSetBlockSize(unsigned int blocksz);
@@ -227,7 +245,7 @@ U16 GetCurScrnID(void);
 int DeleleTask(int ftype, int index);
 int QySocketConnect( U8 * pIp, int port, int(*fnxCb)(void*));
 int OnUiUpdateStart(void);
-void OnUiUpdateEnd(U16 srcid);
+void OnUiUpdateEnd(U16 srcid, int result);
 
 
 

@@ -34,7 +34,7 @@ typedef struct tag_qy_adaptor
     S32 (*qy_mmi_wcsicmp)(const U16 *str_src, const U16 *str_dst); 
     S32 (*qy_mmi_wcsnicmp)(const U16 *str_src, const U16 *str_dst, U32 count); 
     
-    void * (*qy_FuncQyMalloc)(unsigned int size); 
+    void * (*qy_FuncQyMalloc)(unsigned int size, unsigned short MOD, unsigned short line); 
     void (*qy_FuncQyFree)(void *ptr); 
     
     
@@ -339,6 +339,30 @@ typedef struct tag_qy_adaptor
     void (*qy_SetCategory111RightSoftkeyFunction)(void (*f) (void), MMI_key_event_type k); 
     void (*qy_wgui_inputs_register_validation_func)(void (*f) (U8 *, U8 *, S32)); 
     int (*qy_MtkSocketConnect)( U8 * pIp, int port, int acount_id, int(*fnxCb)(void*, int)); 
+    void (*qy_FuncQyCheckHeap)(void); 
+    void (*qy_SetDateTimeEx)(void * t); 
+    void (*qy_mmi_frm_clear_protocol_event_handler)(U16 eventID, PsIntFuncPtr funcPtr); 
+    void (*qy_mmi_msg_send_ext_queue)(MYQUEUE *message); 
+    void * (*qy_mmi_construct_msg_local_para_int)(U16 size, S8* file_ptr, U32 line); 
+    
+    void (*qy_GPIO_ModeSetup)(kal_uint16 pin, kal_uint16 conf_dada); 
+    void (*qy_GPIO_InitIO)(char direction, char port); 
+    char (*qy_GPIO_ReadIO)(char port); 
+    void (*qy_GPIO_WriteIO)(char data, char port); 
+    
+    void (*qy_UART_SetOwner)(UART_PORT port, module_type ownerid); 
+    kal_bool (*qy_UART_Open)(UART_PORT port, module_type ownerid); 
+    void (*qy_UART_Close)(UART_PORT port, module_type ownerid); 
+    void (*qy_UART_SetBaudRate)(UART_PORT port, UART_baudrate baud_rate, module_type ownerid); 
+    void (*qy_UART_SetDCBConfig)(UART_PORT port, UARTDCBStruct *UART_Config, module_type ownerid); 
+    void (*qy_UART_ReadDCBConfig)(UART_PORT port, UARTDCBStruct *DCB); 
+    kal_uint16 (*qy_UART_GetBytes)(UART_PORT port, kal_uint8 *Buffaddr, kal_uint16 Length, kal_uint8 *status, module_type ownerid); 
+    kal_uint16 (*qy_UART_PutBytes)(UART_PORT port, kal_uint8 *Buffaddr, kal_uint16 Length, module_type ownerid); 
+    kal_uint16 (*qy_UART_SendData)(UART_PORT port, kal_uint8 *Buffaddr, kal_uint16 Length,kal_uint8 mode,kal_uint8 escape_char, module_type ownerid ); 
+    
+    kal_uint8 (*qy_L1SM_GetHandle)(void); 
+    void (*qy_L1SM_SleepEnable)(kal_uint8 handle); 
+    void (*qy_L1SM_SleepDisable)(kal_uint8 handle); 
     
     //Gloabal variables here
     int Globalbase                      ; /*     GLOBAL_BASE,     */ 
@@ -356,6 +380,12 @@ typedef struct tag_qy_adaptor
     const U16 * pIndexIconsImageList    ; /*     &gIndexIconsImageList[0], */ 
     U8 *  pcurrentHighlightIndex        ; /*     &currentHighlightIndex, */ 
     void * gp_inline_items              ; /*     &wgui_inline_items[0], */ 
-    void * pextern                      ; /*     &g_pext  */ 
+    void * pextern                      ; /*     &g_pext, */ 
+    U8 * pLargeHeap                     ; /*     &g_QyHeapBuff[0], */ 
+
+    QyFocusFnx * pFnxQyFocus            ; /*     &g_QinYiFnxOnfocus, */ 
+    
+
+     
 
 }QY_ADAPTOR; 

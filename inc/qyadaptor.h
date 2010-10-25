@@ -22,6 +22,13 @@ typedef int (*PsIntFuncPtr)(void *);
 #include "QinYiExportFnx.h"
 #endif
 
+typedef struct tag_ext_info{
+    int ver;
+    U8  Authenticate;
+}EXT_INFO;
+
+extern EXT_INFO * g_pext;
+
 #define wgui_inline_items           ((wgui_inline_item*)g_pMtk->gp_inline_items)
 #define gIndexIconsImageList        (g_pMtk->pIndexIconsImageList)
 
@@ -39,6 +46,7 @@ typedef int (*PsIntFuncPtr)(void *);
 #define currentHighlightIndex       (*g_pMtk->pcurrentHighlightIndex)
 #define gIndexIconsImageList      	(g_pMtk->pIndexIconsImageList) 
 
+#define g_bQyAuthenticate           (g_pext->Authenticate)
 #define RES_SOC_MSG(msg)            (msg + MSG_ID_SOC_CODE_BEGIN)
 
 #define set_left_softkey_label(S)   set_softkey_label(S, MMI_LEFT_SOFTKEY)
