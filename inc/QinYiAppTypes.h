@@ -1,20 +1,22 @@
 #ifndef _QINYI_APPTYPES_H
 #define _QINYI_APPTYPES_H
 
-#define CMD_LOGIN         1000
-#define CMD_LOGIN_REQ     1
-#define CMD_LOGIN_ACK     2
+#define CMD_LOGIN           1000
+#define CMD_LOGIN_REQ       1
+#define CMD_LOGIN_ACK       2
 
-#define CMD_RECIVE        1002
+#define CMD_RECIVE          1002
 
-#define CMD_SIGN_RECTP    1003
-#define CMD_SRECTP_REQ    1
-#define CMD_SRECTP_ACK    2
+#define CMD_SIGN_RECTP      1003
+#define CMD_SRECTP_REQ      1
+#define CMD_SRECTP_ACK      2
 
-#define CMD_PROBLEM       1004
-#define CMD_QUERYUPDATE   1100
-#define CMD_UPDATESW      1101
-#define CMD_QUERYUPDATE_REQ  2
+#define CMD_PROBLEM         1004
+#define CMD_QRY_EXP_STATUS  1006
+#define CMD_QRY_EPX_STA_REQ 1
+#define CMD_QUERYUPDATE     1100
+#define CMD_UPDATESW        1101
+#define CMD_QUERYUPDATE_REQ 2
 
 #define MAX_RDID_LEN       14
 #define DEF_ID_MAX_BUFF    32
@@ -29,9 +31,9 @@
 
 #define QY_HEAP_MEM_SIZE     (2*1024*1024)
 
-#define SOCKET_TIMEOUT_TIMER QINYI_TIMER_ID_START
+#define SOCKET_TIMEOUT_TIMER  QINYI_TIMER_ID_START
 #define EXIT_WINDOW_TIMER    (QINYI_TIMER_ID_START+1)
-#define ASYN_SEND_TASK       (QINYI_TIMER_ID_START+2)
+#define ASYN_CHECK           (QINYI_TIMER_ID_START+2)
 #define ASYN_TASK            (QINYI_TIMER_ID_START+3)
 #define MAX_LIST_TASK_NUM    (300)
 
@@ -192,6 +194,16 @@ typedef struct _QY_ALL_TASKINFO
     U16 TitleBuff[MAX_LIST_TASK_NUM*(MAX_RDID_LEN+1)];    
 }QY_ALL_TASKINFO; //34 * max size
 
+typedef struct _NOB_ACK_INFO
+{
+    int result;
+    int cmd;
+    int err;
+    int field;
+    int buflen;
+    void * pbuf;
+}NOB_ACK;
+
 extern QY_SETTING_PROF * g_SettingProf;
 
 extern U16 g_QyFolders[][24];
@@ -210,7 +222,7 @@ int QySendLoginCmd(U16 * user , U16 * pwd, int (*f)(int ret));
 int GetAckTime(void *hack, MYTIME * tmack);
 int QyGetAckLen(void);
 int QyGetAckData(void * buff, int len); 
-void * GetAckHandle( int * pcmd,int * perr, int * pFieldTotal);
+void * GetAckHandle( int * pcmd,int * perr, int * pFieldTotal, int * buflen);
 void FreeAckHandle(void * packHandle);
 int QySendSignRecptCmd(U16 * SignName, int totals, QY_RDID * pIds, FuncCmdAck f);
 
@@ -232,6 +244,7 @@ U16 * QureyErrorString(int errcode);
 void CancelNet(void);
 void DisableKeyEvent(void);
 
+void QyShowMessage(U16 * title, U16 * Info, FuncPtr fncExit);
 
 
 void * FuncQyMalloc(unsigned int size, unsigned short MOD, unsigned short line);
@@ -246,7 +259,9 @@ int DeleleTask(int ftype, int index);
 int QySocketConnect( U8 * pIp, int port, int(*fnxCb)(void*));
 int OnUiUpdateStart(void);
 void OnUiUpdateEnd(U16 srcid, int result);
-
-
+int SendNextTask(void);
+void QueryStatuByExpId(U16 * strExpId);
+void OnUiCmdFinsh(NOB_ACK * nob_ack);
+U16 * GetFeild(void * buff, int len, int idx);
 
 #endif /*_QINYI_APPTYPES_H*/

@@ -1,18 +1,12 @@
-
----- FuncQyFree Matches (7 in 5 files) ----
-QinYiAdpStruct.h (inc):    void (*qy_FuncQyFree)(void *ptr); 
-QinYiApp.h (inc):#define QyFree            FuncQyFree
-QinYiAppTypes.h (inc):#define QyFree            FuncQyFree
-QinYiAppTypes.h (inc):void FuncQyFree(void *ptr);
-QinYiFnxDef.h (inc):#define FuncQyFree 	g_pMtk->qy_FuncQyFree
-QinYiprot.h (inc):    void FuncQyFree(void *ptr);
----- g_bQyAuthenticate Matches (9 in 1 files) ----
-QinYiAppSrc.c (src):extern U8 g_bQyAuthenticate ;
-QinYiAppSrc.c (src):        g_bQyAuthenticate = UN_AUTHEN;
-QinYiAppSrc.c (src):    g_bQyAuthenticate = QyLogStatus;
-QinYiAppSrc.c (src):                g_bQyAuthenticate = QY_AUTHEND;
-QinYiAppSrc.c (src):    if( g_bQyAuthenticate != LOCAL_AUTH )
-QinYiAppSrc.c (src):                g_bQyAuthenticate = QY_AUTHEND;
-QinYiAppSrc.c (src):        g_bQyAuthenticate = SERVER_AUTH;
-QinYiAppSrc.c (src):        g_bQyAuthenticate = bServerAuthen;
-QinYiAppSrc.c (src):    if( g_bQyAuthenticate ==  UN_AUTHEN ) 
+---- ResetAsySendTimer Matches (3 in 0 files) ----
+QinYiAppSrc.c (src):void ResetAsySendTimer(void);
+QinYiAppSrc.c (src):        ResetAsySendTimer();
+QinYiProtocol.c (src):void ResetAsySendTimer(void)
+---- AddListItem Matches (7 in 4 files) ----
+QinYiAdpStruct.h (inc):    int (*qy_AddListItem)(int idx, U16 * text, int chars, int type); 
+QinYiAppSrc.c (src):    AddListItem(idx++, ((U16*)"\xA1\x7B\x6\x74\x58\x54\xC6\x5B\x1\x78\x0\x0") /*L"管理员密码"*/,0 ,-1);
+QinYiAppSrc.c (src):    AddListItem(idx++, g_TstKeyPwd, QY_PSWD_MAX_LEN, IMM_INPUT_TYPE_NUMERIC_PASSWORD);
+QinYiAppSrc.c (src):    AddListItem(idx++, ((U16*)"\x8C\x5B\x10\x62\x0\x0") /*L"完成"*/,0 ,-2);
+QinYiFnxDef.h (inc):#define AddListItem 	g_pMtk->qy_AddListItem
+QinYiprot.h (inc):    int AddListItem(int idx, U16 * text, int chars, int type);
+---- func_ptr Matches (0 in 0 files) ----

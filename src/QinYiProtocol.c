@@ -24,7 +24,8 @@ typedef void * HCMD;
 void QyAppendCmdItem(HCMD  hcmd, U16 *strParam);
 void PostToSystemNob(void * nob);
 void QyAsnchTaskEntry(void);
-
+void QyAsnchCheckEntry(void);
+void ClearAsynNob(void);
 
 
 
@@ -48,6 +49,7 @@ int QyAppendTime(LPNOB  pNob)
 HCMD QyInitialComamnd(int cmd, int req, int maxlen)
 {
     LPNOB  pNob = NULL;
+    U16 * pCmdBuf;
     maxlen = ( maxlen ==0 )? MAX_CMD_BUFF_LEN : ( (maxlen +4 ) & (~4)); 
 
     pNob = (LPNOB)QyMalloc(sizeof( NOB ) + maxlen);
@@ -59,9 +61,9 @@ HCMD QyInitialComamnd(int cmd, int req, int maxlen)
     
     pNob->pBufEnd = (U16 *)((U8 *)pNob->CmdBuf+maxlen);
     
-    
-    kal_wsprintf(((U16 *)pNob->CmdBuf)+9, "%4d`%02d00", cmd, req); 
-    pNob->pCmdCurPtr = pNob->CmdBuf + 18;
+    pCmdBuf = (U16 *)pNob->CmdBuf;
+    kal_wsprintf(pCmdBuf+9, "%4d`%02d00", cmd, req); 
+    pNob->pCmdCurPtr = pCmdBuf + 18;
 
     QyAppendCmdItem(pNob, g_SettingProf->user_info.name);
     QyAppendTime(pNob);
@@ -98,8 +100,18 @@ void QyAppendCmdInt(HCMD hcmd,int val, U16 spit)
         kal_wsprintf((U16 *)(pNob->pCmdCurPtr), "%c%08d",spit, val); 
         pNob->pCmdCurPtr = pNob->pCmdCurPtr + kal_wstrlen(pNob->pCmdCurPtr);
     }    
-    
 }
+
+void QyAppendCmdHex(HCMD hcmd,int val, U16 spit)
+{
+    LPNOB  pNob = (LPNOB)hcmd;
+    if(pNob && pNob->pCmdCurPtr )
+    {
+        kal_wsprintf((U16 *)(pNob->pCmdCurPtr), "%c%08x",spit, val); 
+        pNob->pCmdCurPtr = pNob->pCmdCurPtr + kal_wstrlen(pNob->pCmdCurPtr);
+    }    
+}
+
 
 
 void QyWrapPackage(HCMD hcmd)
@@ -107,12 +119,14 @@ void QyWrapPackage(HCMD hcmd)
     LPNOB  pNob = (LPNOB)hcmd;
     if(pNob && pNob->pCmdCurPtr )
     {
-         int len = (pNob->pCmdCurPtr - pNob->CmdBuf + 1 - 8 )*2;
-         kal_wsprintf(pNob->CmdBuf,"%08X", len);
-         pNob->CmdBuf[8] = L'`';
-         kal_wsprintf(pNob->pCmdCurPtr,"`\n");
-         pNob->cmdLen = (pNob->pCmdCurPtr - pNob->CmdBuf + 2 )*2;
-         //ASSERT( pNob->cmdLen < (pNob->pBufEnd - pNob->CmdBuf)*2)
+        U16 * cmdbuf = (U16 *)pNob->CmdBuf;
+        int len = (pNob->pCmdCurPtr - pNob->CmdBuf + 1 - 8 )*2;
+        kal_wsprintf(pNob->CmdBuf,"%08X", len);
+
+        cmdbuf[8] = L'`';
+        kal_wsprintf(pNob->pCmdCurPtr,"`\n");
+        pNob->cmdLen = (pNob->pCmdCurPtr - pNob->CmdBuf + 2 )*2;
+        //ASSERT( pNob->cmdLen < (pNob->pBufEnd - pNob->CmdBuf)*2)
     }         
 }
 
@@ -243,7 +257,7 @@ int Qy_soc_socket_notify(void *inMsg, int msg)
         break;
 	case SOC_WOULDBLOCK|SOC_EXT_MSG:
         g_SocTimerRet = NET_DATA_TIMOUT;
-		StartTimer(SOCKET_TIMEOUT_TIMER,40000,qy_soc_timeout);
+		StartTimer(SOCKET_TIMEOUT_TIMER,3*60000,qy_soc_timeout);
 		break;
 
     }
@@ -334,7 +348,8 @@ int QySocketConnect( U8 * pIp, int port, int(*fnxCb)(void*))
     
 }
 
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
     
 int QyGetAckLen(void)
 {
@@ -442,8 +457,15 @@ int ParseAckPackage(int * pcmd, int * perr, U16 * pack, int len)
     
 }
 
+void * GetAckHandleEx( NOB_ACK * pack_info)
+{
+    pack_info->pbuf = GetAckHandle(  &pack_info->cmd, &pack_info->err, &pack_info->field,
+                          &pack_info->buflen);
+    return pack_info->pbuf ;
+}
+    
 
-void * GetAckHandle( int * pcmd,int * perr, int * pFieldTotal)
+void * GetAckHandle( int * pcmd,int * perr, int * pFieldTotal, int * buflen)
 {
     U16 * pack = NULL;
     int totals;
@@ -463,6 +485,7 @@ void * GetAckHandle( int * pcmd,int * perr, int * pFieldTotal)
                 *pFieldTotal = totals;
         }
     }
+    if( buflen ) *buflen = len;
     return pack;
 }
 
@@ -566,7 +589,7 @@ int QyPrepareSignRecptCmd(U16 * SignName, int totals,QY_RDID * pIds, FuncCmdAck 
     {
         U16 Strrdid[MAX_RDID_LEN+2];
         QyAppendCmdItem(hcmd, SignName);
-        QyAppendCmdInt(hcmd, totals, L'\t');
+        QyAppendCmdHex(hcmd, totals, L'\t');
         for( i=0; i<totals; i++)
         {
             mmi_asc_n_to_wcs(Strrdid, (S8*)pIds[i].Rdid, MAX_RDID_LEN+1),
@@ -586,7 +609,7 @@ int QyPrepareSignRecptCmd(U16 * SignName, int totals,QY_RDID * pIds, FuncCmdAck 
 //运单号\t
 //问题件原因说明
 //:1004`0100`01291.001`20100925043929`问题件类型  运单总数  问题件单号1  问题件原因  问题件运单号n  空`
-#if 1
+#if 0
 /*中通
   14	电话无人接听           1. 电话无人接听
     3	查无此人               2. 查无此人
@@ -598,57 +621,81 @@ int QyPrepareSignRecptCmd(U16 * SignName, int totals,QY_RDID * pIds, FuncCmdAck 
     15	客户要求重新派送       8. 客户要求重新派送
     17	家中无人               9. 家中无人
     16	其他                   10.其他*/
-#define QY_SIZE_PRBLEM_LIST_MAX  23
 
-U8 g_ProblemTextList[][QY_SIZE_PRBLEM_LIST_MAX] = {
- {("\x31\x0\x2E\x0\x35\x75\xDD\x8B\xE0\x65\xBA\x4E\xA5\x63\x2C\x54\x0\x0") /*L"1.电话无人接听"*/}
-,{("\x32\x0\x2E\x0\xE5\x67\xE0\x65\x64\x6B\xBA\x4E\x0\x0") /*L"2.查无此人"*/}
-,{("\x33\x0\x2E\x0\x30\x57\x40\x57\xD\x4E\xE6\x8B\x0\x0") /*L"3.地址不详"*/}
-,{("\x34\x0\x2E\x0\xD2\x62\xDD\x7E\x30\x52\xD8\x4E\x3E\x6B\x0\x0") /*L"4.拒绝到付款"*/}
-,{("\x35\x0\x2E\x0\xD2\x62\xDD\x7E\xE3\x4E\x36\x65\x27\x8D\x3E\x6B\x0\x0") /*L"5.拒绝代收货款"*/}
-,{("\x36\x0\x2E\x0\xA2\x5B\x37\x62\xD2\x62\x36\x65\x0\x0") /*L"6.客户拒收"*/}
-,{("\x37\x0\x2E\x0\x34\x78\x5F\x63\xF6\x4E\x0\x0") /*L"7.破损件"*/}
-,{("\x38\x0\x2E\x0\xA2\x5B\x37\x62\x81\x89\x42\x6C\xCD\x91\xB0\x65\x3E\x6D\xD1\x53\x0\x0") /*L"8.客户要求重新派发"*/}
-,{("\x39\x0\x2E\x0\xB6\x5B\x2D\x4E\xE0\x65\xBA\x4E\x0\x0") /*L"9.家中无人"*/}
-,{("\x31\x0\x30\x0\x76\x51\xD6\x4E\x0\x0") /*L"10其他"*/}
+U8 g_ProblemTextList[] = {
+"\x31\x0\x2E\x0\x35\x75\xDD\x8B\xE0\x65\xBA\x4E\xA5\x63\x2C\x54\x0\x0" /*L"1.电话无人接听"*/
+"\x32\x0\x2E\x0\xE5\x67\xE0\x65\x64\x6B\xBA\x4E\x0\x0" /*L"2.查无此人"*/
+"\x33\x0\x2E\x0\x30\x57\x40\x57\xD\x4E\xE6\x8B\x0\x0" /*L"3.地址不详"*/
+"\x34\x0\x2E\x0\xD2\x62\xDD\x7E\x30\x52\xD8\x4E\x3E\x6B\x0\x0" /*L"4.拒绝到付款"*/
+"\x35\x0\x2E\x0\xD2\x62\xDD\x7E\xE3\x4E\x36\x65\x27\x8D\x3E\x6B\x0\x0" /*L"5.拒绝代收货款"*/
+"\x36\x0\x2E\x0\xA2\x5B\x37\x62\xD2\x62\x36\x65\x0\x0" /*L"6.客户拒收"*/
+"\x37\x0\x2E\x0\x34\x78\x5F\x63\xF6\x4E\x0\x0" /*L"7.破损件"*/
+"\x38\x0\x2E\x0\xA2\x5B\x37\x62\x81\x89\x42\x6C\xCD\x91\xB0\x65\x3E\x6D\xD1\x53\x0\x0" /*L"8.客户要求重新派发"*/
+"\x39\x0\x2E\x0\xB6\x5B\x2D\x4E\xE0\x65\xBA\x4E\x0\x0" /*L"9.家中无人"*/
+"\x31\x0\x30\x0\x76\x51\xD6\x4E\x0\x0" /*L"10其他"*/
+"\0\0\0\0"
 };
 const int g_problem_map[]= {16,14,3, 1, 5, 12, 6, 7, 15, 17, 16,11};
 
 #else
 /*
-4         错发件                           1.错发件
-3         查无此人                         2.查无此人
-1         地址不详	                       3.地址不详
-5         拒付到付款                       4.拒付到付款
-13        超区                             5 超区
-6         客户拒收                         6.客户拒收
-7         破损件                           7.破损件
-2         面单脱落                         8.面单脱落
-12        其他                             9.其他
+18	部分快件签收    1.  ---------------终端顺序
+3	查无此人	    2.
+13	超区            3.
+4	错发件          4.
+1	地址不详	    5.
+10	电话错误        6.
+11	家中无人        7.
+9	节假日休息      8.
+5	拒付到付款      9.
+2	客户电话无人接  10.
+6	客户拒收        11.
+16	客户无证件      12.
+8	客户要求改地址  13.
+15	客户要求改日送  14.
+7	破损件          15.
+17	退件            16.
+12	其他            17.
 */
-#define QY_SIZE_PRBLEM_LIST_MAX  16
-U8 g_ProblemTextList[][QY_SIZE_PRBLEM_LIST_MAX] = {
-  {("\x31\x0\x2E\x0\x19\x95\xD1\x53\xF6\x4E\x0\x0") /*L"1.错发件"*/}
- ,{("\x32\x0\x2E\x0\xE5\x67\xE0\x65\x64\x6B\xBA\x4E\x0\x0") /*L"2.查无此人"*/}
- ,{("\x33\x0\x2E\x0\x30\x57\x40\x57\xD\x4E\xE6\x8B\x0\x0") /*L"3.地址不详"*/}
- ,{("\x34\x0\x2E\x0\xD2\x62\xD8\x4E\x30\x52\xD8\x4E\x3E\x6B\x0") /*L"4.拒付到付款"*/}
- ,{("\x35\x0\x20\x0\x85\x8D\x3A\x53\x0\x0") /*L"5 超区"*/}
- ,{("\x36\x0\x2E\x0\xA2\x5B\x37\x62\xD2\x62\x36\x65\x0\x0") /*L"6.客户拒收"*/}
- ,{("\x37\x0\x2E\x0\x34\x78\x5F\x63\xF6\x4E\x0\x0") /*L"7.破损件"*/}
- ,{("\x38\x0\x2E\x0\x62\x97\x55\x53\x31\x81\x3D\x84\x0\x0") /*L"8.面单脱落"*/}
- ,{("\x39\x0\x2E\x0\x76\x51\xD6\x4E\x0\x0") /*L"9.其他"*/}
+U8 g_ProblemTextList[] = 
+{
+"\x31\x0\x2E\x0\xE8\x90\x6\x52\xEB\x5F\xF6\x4E\x7E\x7B\x36\x65\x0\x0"  /*L"1.部分快件签收"*/
+"\x32\x0\x2E\x0\xE5\x67\xE0\x65\x64\x6B\xBA\x4E\x0\x0"  /*L"2.查无此人"*/
+"\x33\x0\x2E\x0\x85\x8D\x3A\x53\x0\x0"  /*L"3.超区"*/
+"\x34\x0\x2E\x0\x19\x95\xD1\x53\xF6\x4E\x0\x0" /*L"4.错发件"*/ 
+"\x35\x0\x2E\x0\x30\x57\x40\x57\xD\x4E\xE6\x8B\x0\x0" /*L"5.地址不详"*/    
+"\x36\x0\x2E\x0\x35\x75\xDD\x8B\x19\x95\xEF\x8B\x0\x0" /*L"6.电话错误"*/
+"\x37\x0\x2E\x0\xB6\x5B\x2D\x4E\xE0\x65\xBA\x4E\x0\x0" /*L"7.家中无人"*/
+"\x38\x0\x2E\x0\x82\x82\x47\x50\xE5\x65\x11\x4F\x6F\x60\x0\x0" /*L"8.节假日休息"*/
+"\x39\x0\x2E\x0\xD2\x62\xD8\x4E\x30\x52\xD8\x4E\x3E\x6B\x0\x0" /*L"9.拒付到付款"*/
+"\x31\x0\x30\x0\x2E\x0\xA2\x5B\x37\x62\x35\x75\xDD\x8B\xE0\x65\xBA\x4E\xA5\x63\x0\x0" /*L"10.客户电话无人接"*/
+"\x31\x0\x31\x0\x2E\x0\xA2\x5B\x37\x62\xD2\x62\x36\x65\x0\x0" /*L"11.客户拒收"*/
+"\x31\x0\x32\x0\x2E\x0\xA2\x5B\x37\x62\xE0\x65\xC1\x8B\xF6\x4E\x0\x0" /*L"12.客户无证件"*/
+"\x31\x0\x33\x0\x2E\x0\xA2\x5B\x37\x62\x81\x89\x42\x6C\x39\x65\x30\x57\x40\x57\x0\x0" /*L"13.客户要求改地址"*/
+"\x31\x0\x34\x0\x2E\x0\xA2\x5B\x37\x62\x81\x89\x42\x6C\x39\x65\xE5\x65\x1\x90\x0\x0" /*L"14.客户要求改日送"*/
+"\x31\x0\x35\x0\x2E\x0\x34\x78\x5F\x63\xF6\x4E\x0\x0" /*L"15.破损件"*/
+"\x31\x0\x36\x0\x2E\x0\x0\x90\xF6\x4E\x0\x0" /*L"16.退件"*/
+"\x31\x0\x37\x0\x2E\x0\x76\x51\xD6\x4E\x0\x0" /*L"17.其他"*/
+"\0\0\0\0"
 };
-const int g_problem_map[]= {12,4,3,1,5,13,6,7,2,12};
+
+const int g_problem_map[]= {12,18,3,13,4,1,10,11,9,5,2,6,16,8,15,7,17,12};
 #endif 
-const int g_ProblemTextItemCount = sizeof(g_ProblemTextList)/QY_SIZE_PRBLEM_LIST_MAX ;
 
 U8 * GetProblemTextByIndex(int index)
 {
-    if( index < sizeof(g_ProblemTextList)/QY_SIZE_PRBLEM_LIST_MAX )
+    U16 * pstr = (U16 *)g_ProblemTextList;
+    while(index--)
     {
-        return g_ProblemTextList[index];
+        int slen = kal_wstrlen(pstr);
+        if( slen == 0 )
+            return NULL;
+        
+        pstr += slen + 1;
+        if( * pstr == 0 )
+            return NULL;
     }
-    return NULL;
+    return (U8*)pstr;
 }
 
 int QyPrepareIssueCmd(PROBLEM_JOUNOR * pProblemJouner, int totals,QY_RDID * pIds, FuncCmdAck f)
@@ -1025,6 +1072,7 @@ int  SendTask(TASK_HEADER * ptask, int bpromopt, FuncCmdAck f)
     case QYF_PROBLEM:
         return QyPrepareIssueCmd(ptask->pJunor, ptask->totals, ptask->pRdId, f);
     }
+    ClearAsynNob();
     return 0;
 } 
 
@@ -1142,7 +1190,7 @@ int OnFishAsynSend(int ret)
     if( ret > 0 )
     {
         int cmd, err,field;
-        void * hack = GetAckHandle(&cmd, &err,&field);
+        void * hack = GetAckHandle(&cmd, &err,&field,NULL);
         FreeAckHandle(hack);
 
         if( g_pAsynTask && cmd == g_cmdReqAck[(g_pAsynTask->filetype&QYF_FILE_MASK) - 1])
@@ -1234,7 +1282,8 @@ void ReStartQyAsySendThread(void)
 void StartQyAsySendThread(void)
 {
     g_AsySendThreadStatus = QYTSK_RUNNING;
-    StartTimer(ASYN_TASK,g_SettingProf->AutoConnectTime*1000,QyAsnchTaskEntry);
+    StartTimer(ASYN_TASK,1000,QyAsnchTaskEntry);
+    StartTimer(ASYN_CHECK,g_SettingProf->AutoConnectTime*1000,QyAsnchCheckEntry);    
 }
 
 void SuspendQyAsySendThread(void)
@@ -1247,9 +1296,9 @@ void ResumeQyAsySendThread(void)
     g_AsySendThreadStatus = QYTSK_RUNNING;   
 }
 
-void ResetAsySendTimer(void)
+void ResetAsyCheckTimer(void)
 {
-    StartTimer(ASYN_TASK,g_SettingProf->AutoConnectTime*1000,QyAsnchTaskEntry);
+    StartTimer(ASYN_CHECK,g_SettingProf->AutoConnectTime*1000,QyAsnchCheckEntry);
 }
 
 
@@ -1269,6 +1318,11 @@ void QyAsySendReadyTask(void)
 
 
 LPNOB g_NobQueu[3][2];
+void ClearAsynNob(void)
+{
+    g_NobQueu[1][0] = g_NobQueu[1][1] = NULL;
+}
+
 void ClearNobQueue(void * nob)
 {
     LPNOB  pNob = (LPNOB)nob;
@@ -1295,9 +1349,20 @@ void PostToSystemNob(void * nob)
 }
 
 
+void QyAsnchCheckEntry(void)
+{
+    StartTimer(ASYN_CHECK,g_SettingProf->AutoConnectTime*1000,QyAsnchTaskEntry);
+    //Check ready task to send
+    if( g_AsySendThreadStatus == QYTSK_RUNNING && (g_NobQueu[1][0] == NULL ))
+    {
+        QyAsySendReadyTask();
+    }
+          
+}
+
 void QyAsnchTaskEntry(void)
 {
-    StartTimer(ASYN_TASK,g_SettingProf->AutoConnectTime*1000,QyAsnchTaskEntry);
+    StartTimer(ASYN_TASK,1000,QyAsnchTaskEntry);
     if( g_OnGoningNob )//Current net resource avlibal
     {
         return ;
@@ -1310,16 +1375,11 @@ void QyAsnchTaskEntry(void)
         return ;
     }
 
-    //Check ready task to send
-    if( g_AsySendThreadStatus == QYTSK_RUNNING )
+    if( g_AsySendThreadStatus == QYTSK_RUNNING && g_NobQueu[1][0] )
     {
-        QyAsySendReadyTask();
-        if( g_NobQueu[1][0])
-        {
-            kal_prompt_trace(MOD_MMI, "Start asynch task");
-            SendNob(g_NobQueu[1][0]);
-            return ;
-        }
+        kal_prompt_trace(MOD_MMI, "Start asynch task");
+        SendNob(g_NobQueu[1][0]);
+        return ;
     }
 
 
@@ -1517,7 +1577,7 @@ int QyOnQueryUpdateAck(int ret)
     if( ret > 0 )
     {
         int cmd, err,field, bCompress;
-        void * hack = GetAckHandle(&cmd, &err,&field);
+        void * hack = GetAckHandle(&cmd, &err,&field, NULL);
 
         bCompress = 0;
         if( cmd == CMD_QUERYUPDATE  )
@@ -1592,4 +1652,41 @@ void QureySwUpdateable(void)
     kal_wsprintf(vers, "%04d", QY_APPLICATION_VERSION);
     QySendQueryUpdateCmd(QyOnQueryUpdateAck,vers);
     //QySendQueryUpdateCmd(QyOnQueryUpdateAck);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Query express status by express id
+typedef int (*nob_fnx)(int );
+
+
+int OnQueryExpIdStatu(int ret)
+{
+    NOB_ACK  ack_info;
+    if( ret > 0 )
+    {
+        GetAckHandleEx( &ack_info);
+    }
+    ack_info.result = ret;
+    OnUiCmdFinsh(&ack_info);   
+    FreeAckHandle(ack_info.pbuf);     
+    return 1;
+}
+
+int QySendQueryStatuByExpid(nob_fnx cbfnx, U16 * strExpId)
+{
+    HCMD hcmd = QyInitialComamnd(CMD_QRY_EXP_STATUS,CMD_QRY_EPX_STA_REQ,0);
+    if( hcmd )
+    {
+		QyAppendCmdItem(hcmd, strExpId);
+        QyWrapPackage(hcmd );
+        QySendPackage(hcmd, cbfnx, 0);
+        return 1;
+    }
+    return 0;
+}
+
+void QueryStatuByExpId(U16 * strExpId)
+{
+    QySendQueryStatuByExpid(OnQueryExpIdStatu, strExpId);
 }
