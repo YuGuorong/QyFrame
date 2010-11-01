@@ -103,7 +103,7 @@ void QyAppendCmdInt(HCMD hcmd,int val, U16 spit)
 }
 
 void QyAppendCmdHex(HCMD hcmd,int val, U16 spit)
-{
+{ 
     LPNOB  pNob = (LPNOB)hcmd;
     if(pNob && pNob->pCmdCurPtr )
     {
@@ -240,7 +240,7 @@ int Qy_soc_socket_notify(void *inMsg, int msg)
         {
             soc_send(g_qy_socket_id,g_OnGoningNob->CmdBuf,g_OnGoningNob->cmdLen, 0);
             g_SocTimerRet = NET_DATA_TIMOUT;
-            StartTimer(SOCKET_TIMEOUT_TIMER,6000,qy_soc_timeout);
+            StartTimer(SOCKET_TIMEOUT_TIMER,2*6000,qy_soc_timeout);
         }
         else
         {
@@ -609,7 +609,7 @@ int QyPrepareSignRecptCmd(U16 * SignName, int totals,QY_RDID * pIds, FuncCmdAck 
 //运单号\t
 //问题件原因说明
 //:1004`0100`01291.001`20100925043929`问题件类型  运单总数  问题件单号1  问题件原因  问题件运单号n  空`
-#if 0
+#if !defined(VENDOR_NAME) || !defined(VENDOR_ZHONGTONG) || (VENDOR_NAME == VENDOR_ZHONGTONG)
 /*中通
   14	电话无人接听           1. 电话无人接听
     3	查无此人               2. 查无此人
@@ -635,9 +635,9 @@ U8 g_ProblemTextList[] = {
 "\x31\x0\x30\x0\x76\x51\xD6\x4E\x0\x0" /*L"10其他"*/
 "\0\0\0\0"
 };
-const int g_problem_map[]= {16,14,3, 1, 5, 12, 6, 7, 15, 17, 16,11};
 
-#else
+const int g_problem_map[]= {16,14,3, 1, 5, 12, 6, 7, 15, 17, 16,11};
+#elif (VENDOR_NAME == VENDOR_NENGDA)
 /*
 18	部分快件签收    1.  ---------------终端顺序
 3	查无此人	    2.
@@ -678,7 +678,6 @@ U8 g_ProblemTextList[] =
 "\x31\x0\x37\x0\x2E\x0\x76\x51\xD6\x4E\x0\x0" /*L"17.其他"*/
 "\0\0\0\0"
 };
-
 const int g_problem_map[]= {12,18,3,13,4,1,10,11,9,5,2,6,16,8,15,7,17,12};
 #endif 
 
@@ -1209,7 +1208,7 @@ int OnFishAsynSend(int ret)
                 FS_Close(fsh);
             }    
         }
-            
+        StartTimer(ASYN_CHECK,10,QyAsnchCheckEntry);
     }
     
     QyFree(g_pAsynTask);
@@ -1351,7 +1350,7 @@ void PostToSystemNob(void * nob)
 
 void QyAsnchCheckEntry(void)
 {
-    StartTimer(ASYN_CHECK,g_SettingProf->AutoConnectTime*1000,QyAsnchTaskEntry);
+    StartTimer(ASYN_CHECK,g_SettingProf->AutoConnectTime*1000,QyAsnchCheckEntry);
     //Check ready task to send
     if( g_AsySendThreadStatus == QYTSK_RUNNING && (g_NobQueu[1][0] == NULL ))
     {

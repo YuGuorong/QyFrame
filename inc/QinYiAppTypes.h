@@ -1,6 +1,11 @@
 #ifndef _QINYI_APPTYPES_H
 #define _QINYI_APPTYPES_H
 
+
+#define VENDOR_ZHONGTONG    1
+#define VENDOR_NENGDA       2   
+#define VENDOR_NAME         VENDOR_NENGDA // //VENDOR_ZHONGTONG  // 
+
 #define CMD_LOGIN           1000
 #define CMD_LOGIN_REQ       1
 #define CMD_LOGIN_ACK       2

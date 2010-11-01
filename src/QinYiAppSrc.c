@@ -21,7 +21,7 @@
 ************************************************************************************************/
 int QyCheckPassword(void);
 void OnSideKeyHandle(void);
-void ResetAsyCheckTimer(void);
+void ResetAsyCheckTimer(void); 
 
 QY_SETTING_PROF *  g_SettingProf;
 HistoryDelCBPtr g_fncQyConfirmAbort = NULL;
@@ -103,7 +103,7 @@ static void QinYiCloseScanDev(void)
     	SetDefaultScanKeyHandlers();
     }
 }
-
+  
 static void QinYiSetScanHandle(pfncScanDone pfnx_scan_done)
 {
     kal_prompt_trace(MOD_MMI,"open_scan_engine & SetKeyHandler %d",GetScanKeyHandler() );    
@@ -513,9 +513,11 @@ void QY_LoginCheck(void)
         {
                 g_bQyAuthenticate = QY_AUTHEND;
                 GetDateTime(&g_LastServerAuthenTime);
-                gdi_layer_lock_frame_buffer();
-                GoBackToHistory(SCR_QINYI_APP_WINDOW_1);
-                gdi_layer_unlock_frame_buffer();
+                gdi_layer_lock_frame_buffer();   
+                DeleteScreenIfPresent(POPUP_SCREENID);
+                GoBackHistory();
+                gdi_layer_unlock_frame_buffer();    
+                 
                 QinYiAppEntry();
                 StartQyAsySendThread();
         }
@@ -738,7 +740,7 @@ void OnQySignScanCode(U16 * pstrCode)
 {
     int toneid = BATTERY_WARNING_TONE ;
     kal_prompt_trace(MOD_MMI,"OnQySignScanCode" );        
-    kal_wstrncpy(g_RfBarCode, pstrCode, 24);
+    kal_wstrncpy(g_RfBarCode, pstrCode, (MAX_RDID_LEN+1)*sizeof(U16));
     if( AddSignBarCode() >= QY_SUCCESS )
     {
         toneid = ERROR_TONE;
@@ -867,7 +869,7 @@ void EntryQinYiSignRecpt(void)
     FuncQyCheckHeap();
     QyFree(ptr);
     
-    memset(g_RfBarCode,  0, 24 *2);
+    memset(g_RfBarCode,  0, sizeof(U16)*(MAX_RDID_LEN+2)  );
     memset(g_SignRecptName,0, QY_USER_MAX_LEN*2 );
     ExitQinYnSignRecpt(NULL);
     
@@ -1422,8 +1424,8 @@ void QyPeoblemListEntry(void)
 
 void QyEntryProblemApp(void)
 {
-    memset(g_RfBarCode,  0, 24 *2);
-    memset(g_SignRecptName,0, sizeof(16)*4);
+    memset(g_RfBarCode,  0, sizeof(U16)*(MAX_RDID_LEN+2)  );
+    memset(g_SignRecptName,0, sizeof(U16)*QY_USER_MAX_LEN);
     ExitQinYnProblem(NULL);
     g_pOtherProblem = QyMalloc(100*2);
     memset(g_pOtherProblem,0 ,100*2);
@@ -2039,7 +2041,6 @@ U32 g_R9Val;
 
 void QinYiAppMain(void)
 {           
-    kal_prompt_trace(MOD_MMI," Dll Entry, %x,%x,%d",R9_BASE_BACKUP,g_R9Val, FLAG_BASE_BACKUP);  
 
     SetKeyHandler(NULL, KEY_EXTRA_1,   KEY_EVENT_UP);
     SetKeyHandler(NULL, KEY_QUICK_ACS, KEY_EVENT_UP);  
