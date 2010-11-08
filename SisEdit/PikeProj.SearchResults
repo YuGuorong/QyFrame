@@ -1,27 +1,15 @@
-
----- memset Matches (19 in 2 files) ----
-QinYiAppSrc.c (src):    memset(g_QinYi_User_Pswd, 0, sizeof(g_QinYi_User_Pswd));
-QinYiAppSrc.c (src):        memset( g_SettingProf->user_info.pwd, 0 , QY_PSWD_MAX_LEN*sizeof(U16));
-QinYiAppSrc.c (src):	memset( g_QinYi_User_Pswd, 0, QY_PSWD_MAX_LEN*2);
-QinYiAppSrc.c (src):    memset(g_RfBarCode,  0, sizeof(U16)*(MAX_RDID_LEN+2)  );
-QinYiAppSrc.c (src):    memset(g_SignRecptName,0, QY_USER_MAX_LEN*2 );
-QinYiAppSrc.c (src):    memset(g_RfBarCode,  0, sizeof(U16)*(MAX_RDID_LEN+2)  );
-QinYiAppSrc.c (src):    memset(g_SignRecptName,0, sizeof(U16)*QY_USER_MAX_LEN);
-QinYiAppSrc.c (src):    memset(g_pOtherProblem,0 ,100*2);
-QinYiAppSrc.c (src):    memset(g_RfBarCode, 0, sizeof(U16)*MAX_RDID_LEN);
-QinYiProtocol.c (src):    memset(pNob, 0, (sizeof( NOB ) + maxlen));
-QinYiProtocol.c (src):            memset( pack, 0 , len );
-QinYiProtocol.c (src):        memset( pNewTask, 0 , sizeof(TASK_HEADER));
-QinYiProtocol.c (src):                    memset(pIds, 0 , sizeof(QY_RDID)*nInitalIdMax);    
-QinYiProtocol.c (src):                    memset( pNewTask->pJunor, 0 ,  jun_size[ftype]); 
-QinYiProtocol.c (src):    memset(RDID.Rdid, 0, sizeof(QY_RDID));
-QinYiProtocol.c (src):    memset(&RDID, 0, sizeof(QY_RDID));
-QinYiProtocol.c (src):    memset(&ptask->pRdId[ptask->totals],  0  , sizeof(QY_RDID));
-QinYiProtocol.c (src):    memset(g_SettingProf->user_info.pwd,0, sizeof(U16)*QY_PSWD_MAX_LEN);  //Clear PWD force to login next log
-QinYiProtocol.c (src):                    memset( g_pUpgradeInfo, 0, sizeof(UPDATEPAKAGEINFO) );
----- R9_BASE_BACKUP Matches (2 in 2 files) ----
-QinYiAppSrc.c (src):    kal_prompt_trace(MOD_MMI," Dll Entry, %s,%s,%d",R9_BASE_BACKUP,g_R9Val, FLAG_BASE_BACKUP);  
-QinYiCommon.h (src):#define R9_BASE_BACKUP    (*(U32*)0x5010f000) 
----- FLAG_BASE_BACKUP Matches (1 in 1 files) ----
-QinYiCommon.h (src):#define FLAG_BASE_BACKUP    (*(unsigned int*)0x5010f004) 
----- QyPikeInitialize Matches (0 in 0 files) ----
+---- kal_wstrncpy Matches (14 in 3 files) ----
+QinYiAppSrc.c (src):    kal_wstrncpy(g_SettingProf->pwd, g_QinYi_User_Pswd, QY_PSWD_MAX_LEN);
+QinYiAppSrc.c (src):        kal_wstrncpy(g_SettingProf->user_info.name, g_QinYi_UserName, QY_USER_MAX_LEN);
+QinYiAppSrc.c (src):    kal_wstrncpy(g_QinYi_User_Pswd,g_SettingProf->pwd,QY_PSWD_MAX_LEN);
+QinYiAppSrc.c (src):    kal_wstrncpy(g_QinYi_UserName, g_SettingProf->user_info.name,QY_USER_MAX_LEN );
+QinYiAppSrc.c (src):                kal_wstrncpy(g_SysUserInfo->name, g_QinYi_UserName, QY_USER_MAX_LEN);
+QinYiAppSrc.c (src):                kal_wstrncpy(g_SysUserInfo->pwd,  g_QinYi_User_Pswd,QY_PSWD_MAX_LEN);
+QinYiAppSrc.c (src):		kal_wstrncpy(tmpUserName, g_SysUserInfo->name, QY_USER_MAX_LEN);
+QinYiAppSrc.c (src):		kal_wstrncpy(g_SysUserInfo->name, g_QinYi_UserName, QY_USER_MAX_LEN);
+QinYiAppSrc.c (src):		kal_wstrncpy( g_SysUserInfo->name, tmpUserName, QY_USER_MAX_LEN);
+QinYiAppSrc.c (src):    kal_wstrncpy(g_RfBarCode, pstrCode, (MAX_RDID_LEN+1));
+QinYiAppSrc.c (src):    kal_wstrncpy(g_RfBarCode, pstrCode, 24);
+QinYiAppSrc.c (src):    kal_wstrncpy(g_RfBarCode, pstrCode, 24);
+QinYiFnxDef.h (inc):#define kal_wstrncpy 	g_pMtk->qy_kal_wstrncpy
+QinYiprot.h (inc):    WCHAR *kal_wstrncpy(WCHAR *to, const WCHAR *from, int n);

@@ -4,7 +4,8 @@
 
 #define VENDOR_ZHONGTONG    1
 #define VENDOR_NENGDA       2   
-#define VENDOR_NAME         VENDOR_NENGDA // //VENDOR_ZHONGTONG  // 
+#define VENDOR_MEIDA        3
+#define VENDOR_NAME         VENDOR_ZHONGTONG  //VENDOR_MEIDA //VENDOR_NENGDA // 
 
 #define CMD_LOGIN           1000
 #define CMD_LOGIN_REQ       1
@@ -41,6 +42,12 @@
 #define ASYN_CHECK           (QINYI_TIMER_ID_START+2)
 #define ASYN_TASK            (QINYI_TIMER_ID_START+3)
 #define MAX_LIST_TASK_NUM    (300)
+
+#ifdef WIN32
+#define MUNU_TEXT   U8
+#else
+#define MENU_TEXT  __align(2) U8 
+#endif
 
 #ifndef QY_MODULE
 #define QY_MODULE   0

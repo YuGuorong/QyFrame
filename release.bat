@@ -1,1 +1,1 @@
-QYReleaseTool.exe ./o/AppsEntry.map ./o/AppsEntry.bin -name>.\o\version.txt
+QYReleaseTool.exe ./o/AppsEntry.map ./o/AppsEntry.bin -name>.\version.txt

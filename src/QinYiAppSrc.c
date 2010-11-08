@@ -1,8 +1,13 @@
 #define QY_MODULE     0x2
 #include "QinYiCommon.h"
-
+/* Content */
+#define SETTING_MODULE
 #define LOGIN_MODULE 
 #define SIGNRECPT_MODULE
+#define PROGLEM_MODULE
+#define QUERY_EXPID_MODULE
+#define TASK_DETAIL_MODULE
+#define MESSAGE_WINDOW
 
 #define ADD_TEXT_ITEM(text)     {SetInlineItemActivation(&(wgui_inline_items[idx]), INLINE_ITEM_ACTIVATE_WITHOUT_KEY_EVENT, 0);\
                                 SetInlineItemDisplayOnly(&(wgui_inline_items[idx]), (U8*)text);idx++;}
@@ -22,12 +27,14 @@
 int QyCheckPassword(void);
 void OnSideKeyHandle(void);
 void ResetAsyCheckTimer(void); 
+void TraceMainTitleEx(int line);
 
 QY_SETTING_PROF *  g_SettingProf;
 HistoryDelCBPtr g_fncQyConfirmAbort = NULL;
 U16 g_QinYi_UserName[QY_USER_MAX_LEN+1];
 U16 g_QinYi_User_Pswd[QY_PSWD_MAX_LEN+1];
 
+//-- popup  --/////////////////////////////////////////////
 void OnPopopEndKey(void)
 {
     ClearAllKeyHandler();
@@ -69,10 +76,22 @@ void SetConfirmExitAbortion(HistoryDelCBPtr funcAbort)
     g_fncQyConfirmAbort = funcAbort;
 }
 
+//-- Scan adapter  --/////////////////////////////////////////////
 pfncScanDone g_QyScanCallback;
 
 void QyScanDone(U16 *strcode)
 {
+    int i=26;
+    U16 * pstr = strcode ;
+    while( i--)
+    {
+        if( *pstr == '\r' || * pstr == '\n' )
+        {
+            *pstr = '\0';
+            break;
+        }
+        pstr++;
+    }   
     if( g_QyScanCallback )
         g_QyScanCallback(strcode);
     close_scan_engine();
@@ -127,6 +146,8 @@ static void ExitQinYListWindow(void)
 *      Module Setting 
 *
 ************************************************************************************************/
+#ifdef SETTING_MODULE
+//-- Setting loging--//////////////////////////////////////////
 void QySettingDetailApp(void);
 void QySetingAuthWndOnOK(void)
 {
@@ -198,8 +219,7 @@ void QySettingApp(void)
 
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////
-// menu setting detail
+//-- Setting Detail--//////////////////////////////////////////
 #define MAX_PART_IP_ADDRESS                  4
 
 //U16 g_NetCod[QY_USER_MAX_LEN];
@@ -339,7 +359,7 @@ void QySettingDetailApp(void)
     //RedrawCategory57Screen();
 }
 
-
+#endif
 
 /************************************************************************************************
 *      Module Loging 
@@ -612,10 +632,6 @@ void EntryQinYiLogin(int bServerAuthen)
 
 #endif /* LOGIN_MODULE*/
 /**************************************************************************************************
-*      Module Bar
-*
-**************************************************************************************************/
-/**************************************************************************************************
 *      Module SignRecption 
 *
 **************************************************************************************************/
@@ -638,25 +654,60 @@ U16 g_SignRecptCpat[3+4+5];
 U16 g_RfBarCode[MAX_RDID_LEN+2];
 TASK_HEADER  * g_pSignRecptTask  = NULL;
 //Implemetion -------------------------------------------------------------------
-int IsValidCode()
+#define IsValidCode()     IsValidCodeEx(__LINE__, g_RfBarCode)
+#define RecheckCode(str)  IsValidCodeEx(__LINE__, str)
+
+void LogFile (int ivk_line, U16 * code)
 {
-    int len  = kal_wstrlen(g_RfBarCode);
-    
-#if 1
-    if( len >= 10 )
-        return 1;
-    return 0;
-#else    
-    
-    if( len == 10 || len == 12 || len == 13 )
-        return 1;
-    return 0;
-#endif 
-    
+    U16 tmp[16];
+    int fs_h  = OpenQyFile(QY_USER, L"Log.txt",FS_READ_WRITE);
+    if( fs_h <= 0 ) fs_h  = OpenQyFile(QY_TMP, L"Log.txt",FS_READ_WRITE|FS_CREATE_ALWAYS);
+    if( fs_h > 0  )
+    {
+        UINT wt;
+        kal_wsprintf(tmp, "\r\n%d:\t", ivk_line );
+        FS_Seek(fs_h, 0, FS_FILE_END);
+        FS_Write(fs_h, tmp, kal_wstrlen(tmp)*2, &wt);
+        FS_Write(fs_h, code,kal_wstrlen(code)*2, &wt);
+        FS_Close(fs_h);
+    }
 }
 
 
-
+int IsValidCodeEx(int line, U16 * pcode)
+{
+#if (VENDOR_NAME ==  VENDOR_MEIDA) || (VENDOR_NAME ==  VENDOR_NENGDA) //VENDOR_ZHONGTONG 
+    int len  = kal_wstrlen(g_RfBarCode);
+    if( len >= 10 )
+        return 1;
+#elif VENDOR_NAME == VENDOR_ZHONGTONG 
+    int i;
+    for(i=0 ; i<15; i++)
+    {
+        if( g_RfBarCode[i] == 0 )
+        {
+            break;
+        }
+        else if( g_RfBarCode[i]>= '0' && g_RfBarCode[i] <='9' )
+        {
+             
+        }
+        else 
+        {
+            if( (i != 9 ) || ( g_RfBarCode[i]< 'A' || g_RfBarCode[i] > 'Z' ) )
+            {
+                LogFile( line, g_RfBarCode);
+                kal_prompt_trace(MOD_MMI, "scan wrong %w", g_RfBarCode);
+                return 0;
+            }
+        }
+    }
+    kal_prompt_trace(MOD_MMI, "scan len %d", i);
+    if( i== 10 || i ==12 || i==13 )
+        return 1;
+#endif
+    return 0;
+}
 
 static U8 ExitQinYnSignRecpt(void * p) 
 {
@@ -740,7 +791,7 @@ void OnQySignScanCode(U16 * pstrCode)
 {
     int toneid = BATTERY_WARNING_TONE ;
     kal_prompt_trace(MOD_MMI,"OnQySignScanCode" );        
-    kal_wstrncpy(g_RfBarCode, pstrCode, (MAX_RDID_LEN+1)*sizeof(U16));
+    kal_wstrncpy(g_RfBarCode, pstrCode, (MAX_RDID_LEN+1));
     if( AddSignBarCode() >= QY_SUCCESS )
     {
         toneid = ERROR_TONE;
@@ -920,9 +971,12 @@ void ShowQueueTaskEntry(void)
     }
     
 }
+#endif /*SIGNRECPT_MODULE*/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Show detail of diffent task
+#ifdef TASK_DETAIL_MODULE
+
 U16 * g_pTaskTotal = NULL;
 U16 * g_pTaskTime = NULL;
 TASK_HEADER * g_pDeailTask = NULL ;
@@ -1186,8 +1240,9 @@ void ShowTaskEntry( int bNotShowDetail)
     }
 }
 
-#endif /*SIGNRECPT_MODULE*/
+#endif 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
+#ifdef PROGLEM_MODULE
 TASK_HEADER  * g_pProblemTask  = NULL;
 int g_ProblemMenuSel;
 U16 * g_pOtherProblem;
@@ -1271,7 +1326,7 @@ void OnQyProblemScanCode(U16 * pstrCode)
     //int len = kal_wstrlen(pstrCode );
     int toneid = BATTERY_WARNING_TONE ;
     kal_prompt_trace(MOD_MMI,"OnQyProblemScanCode" );        
-    kal_wstrncpy(g_RfBarCode, pstrCode, 24);
+    kal_wstrncpy(g_RfBarCode, pstrCode, MAX_RDID_LEN+1);
 #ifdef MULTI_PROBLEM_SUPPORT       
     if( AddProblemBarCode() >= QY_SUCCESS) 
 #endif
@@ -1433,9 +1488,11 @@ void QyEntryProblemApp(void)
     QyPeoblemListEntry();
 }
 
+#endif  /*TASK_DETAIL_MODULE*/
 
 ////////////////////////////////////////////////////////////////////////////////////////list ///////////
-//  list window
+//  QURERY window
+#ifdef QUERY_EXPID_MODULE
 void (*g_OnSendCmdDone)(NOB_ACK * nob_ack);
 void OnUiCmdFinsh(NOB_ACK * nob_ack)
 {
@@ -1551,7 +1608,7 @@ void OnQyQueryExpIdStatusScanCode(U16 * pstrCode)
     //int len = kal_wstrlen(pstrCode );
     int toneid = BATTERY_WARNING_TONE ;
     kal_prompt_trace(MOD_MMI,"OnQyProblemScanCode" );        
-    kal_wstrncpy(g_RfBarCode, pstrCode, 24);
+    kal_wstrncpy(g_RfBarCode, pstrCode, MAX_RDID_LEN+1);
     RedrawCategory57Screen();//dm_redraw_category_screen();
     toneid = ERROR_TONE;
 
@@ -1582,8 +1639,9 @@ void QueryByExpid(void)
     QueryExpidEntry();
 }
 
-
-///////////////////////////////////////////////////////////////////////////////////////List end ////////
+#endif /*QUERY_EXPID_MODULE*/
+/////////////////////////////////////////////////////////////////////////////////////
+#ifdef MESSAGE_WINDOW
 #define  MSG_WINDOW_SRC_ID      (SCR_QINYI_APP_MAX-5)
 U16 * g_qy_display_info_str;
 U16 * g_qy_display_info_title;
@@ -1636,6 +1694,8 @@ void QyShowMessage(U16 * title, U16 * Info, FuncPtr fncExit)
     QyShowMessageEntry();    
 }
 
+
+#endif /*MESSAGE_WINDOW*/
 ///////////////////////////////////////////////////////////////////////////////////////menu ////////////
 //  menu window
 // old {(\([\"x\\A-F0-9]*\))\w+\/\*\([^\*]*\)\*\/}  note: uncheck whole words match
@@ -1646,60 +1706,92 @@ void QyShowMessage(U16 * title, U16 * Info, FuncPtr fncExit)
 
 
 /*******************************************************************************/
-#define InitStrTble(ptr, item)  { int nu = item; while(nu--> 0) { ptr[nu] = &ptr##Tbl[nu][0];} }
-
-U8  g_strMainMenuTbl[][6] =
+#define InitStrTble(ptr , item)       InitStrTbleEx(ptr, (U16 *)(ptr##Tbl), item)
+int wstlen(void * pstr)
 {
-    {("\xDB\x8F\x65\x51\x0") /*L"进入"*/}
-    ,{("\x7B\x76\x55\x5F\x0") /*L"登录"*/}
-    ,{("\xBE\x8B\x6E\x7F\x0") /*L"设置"*/} 
-    ,{("\x73\x51\x8E\x4E\x0") /*L"关于"*/}     
+    U8 * ptr = (U8 *)pstr;
+    int len = 0;
+    while( ptr[0] || ptr[1] )
+    {
+        len ++;
+        ptr += 2;
+    }
+    return len;    
+        
+}
+
+void InitStrTbleEx(U8 ** ptr, U16 * pstr, int item)
+{
+    int i;
+    for(i=0 ; i<item; i++)
+    {
+        int slen = wstlen(pstr);
+        if( slen == 0 )
+            return ;
+        ptr[i] =(U8*) pstr;
+        
+        pstr += slen + 1;
+        if( * pstr == 0 )
+        {
+            return ;
+        };
+    }
+}
+
+
+
+MENU_TEXT   g_strMainMenuTbl[] =
+{
+    "\xDB\x8F\x65\x51\x0\x0" /*L"进入"*/
+    "\x7B\x76\x55\x5F\x0\x0" /*L"登录"*/
+    "\xBE\x8B\x6E\x7F\x0\x0" /*L"设置"*/ 
+    "\x73\x51\x8E\x4E\x0\x0" /*L"关于"*/     
 } ;
 #define QYMAX_MENU_MAIN_ITEMS  4
 U8 * g_strMainMenu[QYMAX_MENU_MAIN_ITEMS];
 
 
-U8  g_strMainEntryTbl[][8] =
+MENU_TEXT  g_strMainEntryTbl[] =
 {
-     {("\x36\x65\xF6\x4E\x0") /*L"收件(0/0)"*/}
-    ,{("\x7E\x7B\x36\x65\x0") /*L"签收"*/}
-    ,{("\xEE\x95\x98\x98\xF6\x4E\x0") /*L"问题件"*/}
-    ,{("\xE5\x67\xE2\x8B\x0") /*L"查询"*/}
-    ,{("\x1A\x90\xE5\x77\x0") /*L"通知(0)"*/}    
+    "\x36\x65\xF6\x4E\x0\x0" /*L"收件(0/0)"*/
+    "\x7E\x7B\x36\x65\x0\x0" /*L"签收"*/
+    "\xEE\x95\x98\x98\xF6\x4E\x0\x0" /*L"问题件"*/
+    "\xE5\x67\xE2\x8B\x0\x0" /*L"查询"*/
+    "\x1A\x90\xE5\x77\x0\x0" /*L"通知(0)"*/    
 } ;
 #define QYMAX_MENU_MAIN_ENTYR_ITEM  5
 U8 * g_strMainEntry[QYMAX_MENU_MAIN_ENTYR_ITEM];
 
-U8  g_titleRecpt[] = {"\x36\x65\xF6\x4E\x0\x0" /*L"收件"*/ };
-U8   g_strReceptionTbl[][10] =
+MENU_TEXT  g_titleRecpt[] = {"\x36\x65\xF6\x4E\x0\x0" /*L"收件"*/ };
+MENU_TEXT  g_strReceptionTbl[] =
 {
-     {("\x49\x7B\x85\x5F\xDE\x56\x0D\x59\x0") /*L"等待回复"*/}
-    ,{("\x09\x67\x55\x53\x36\x65\xF6\x4E\x0") /*L"有单收件"*/}
-    ,{("\xE0\x65\x55\x53\x36\x65\xF6\x4E\x0") /*L"无单收件"*/}
-    ,{("\x4B\x62\xA8\x52\x36\x65\xF6\x4E\x0") /*L"手动收件"*/}
-    ,{("\x49\x7B\x85\x5F\xD1\x53\x01\x90\x0") /*L"等待发送"*/}    
+    "\x49\x7B\x85\x5F\xDE\x56\x0D\x59\x0\x0" /*L"等待回复"*/
+    "\x09\x67\x55\x53\x36\x65\xF6\x4E\x0\x0" /*L"有单收件"*/
+    "\xE0\x65\x55\x53\x36\x65\xF6\x4E\x0\x0" /*L"无单收件"*/
+    "\x4B\x62\xA8\x52\x36\x65\xF6\x4E\x0\x0" /*L"手动收件"*/
+    "\x49\x7B\x85\x5F\xD1\x53\x01\x90\x0\x0" /*L"等待发送"*/    
 } ;
 #define QYMAX_MENU_RECPT_ITEM  5
 U8*   g_strReception[QYMAX_MENU_MAIN_ENTYR_ITEM];
 
 
 
-U8   g_titleSignRecpt[] = {("\x7E\x7B\x36\x65\x0\x0") /*L"签收"*/ };
-U8   g_strSingReceptTbl[][10] =
+MENU_TEXT   g_titleSignRecpt[] = {("\x7E\x7B\x36\x65\x0\x0") /*L"签收"*/ };
+MENU_TEXT   g_strSingReceptTbl[] =
 {
-     {("\x7E\x7B\x36\x65\x0\x0") /*L"签收"*/}
-    ,{("\x49\x7B\x85\x5F\xD1\x53\x1\x90\x0") /*L"等待发送"*/}
+    "\x7E\x7B\x36\x65\x0\x0" /*L"签收"*/
+    "\x49\x7B\x85\x5F\xD1\x53\x1\x90\x0\x0" /*L"等待发送"*/
 };
 #define QYMAX_MENU_SIGNRECPT_ITEM  2
 U8*   g_strSingRecept[QYMAX_MENU_SIGNRECPT_ITEM];
 
 
 
-U8   g_titleProblemList[] = {("\xEE\x95\x98\x98\xF6\x4E\x0\x0") /*L"问题件"*/ };
-U8   g_strProblemListTbl[][10] =
+MENU_TEXT   g_titleProblemList[] = {("\xEE\x95\x98\x98\xF6\x4E\x0\x0") /*L"问题件"*/ };
+MENU_TEXT   g_strProblemListTbl[] =
 {
-     {("\xEE\x95\x98\x98\xF6\x4E\x0\x0") /*L"问题件"*/}
-    ,{("\x49\x7B\x85\x5F\xD1\x53\x1\x90\x0") /*L"等待发送"*/}    
+   "\xEE\x95\x98\x98\xF6\x4E\x0\x0" /*L"问题件"*/
+   "\x49\x7B\x85\x5F\xD1\x53\x1\x90\x0\x0" /*L"等待发送"*/    
 };
 #define QYMAX_MENU_PROBLEM_ITEM  2
 U8 * g_strProblemList[QYMAX_MENU_PROBLEM_ITEM];
@@ -1707,22 +1799,22 @@ U8 * g_strProblemList[QYMAX_MENU_PROBLEM_ITEM];
 
 
 
-U8   g_titleOptionReSend[] = {"\x9\x90\x79\x98\x0\x0"/*L"选项"*/};
-U8   g_strOptReSendListTbl[][10] =
+MENU_TEXT   g_titleOptionReSend[] = {"\x9\x90\x79\x98\x0\x0"/*L"选项"*/};
+MENU_TEXT   g_strOptReSendListTbl[]  =
 {
-     {("\x53\x62\x0\x5F\x0") /*L"打开"*/}
-    ,{("\xCD\x91\xD1\x53\x0") /*L"重发"*/}    
-    ,{("\x68\x51\xE8\x90\xCD\x91\xD1\x53") /*L"全部重发"*/}    
+    "\x53\x62\x0\x5F\x0\x0" /*L"打开"*/
+    "\xCD\x91\xD1\x53\x0\x0" /*L"重发"*/    
+    "\x68\x51\xE8\x90\xCD\x91\xD1\x53\x0\x0" /*L"全部重发"*/    
 };
 #define QYMAX_MENU_OPT_SEND_ITEM  3
 U8 * g_strOptReSendList[QYMAX_MENU_OPT_SEND_ITEM] ;
 
 
-U8   g_strQueryTbl[][6] =
+MENU_TEXT   g_strQueryTbl[]  =
 {
-     {("\xE5\x67\xE2\x8B\x0") /*L"查询"*/}
-    ,{("\xA2\x8B\x55\x53\x0") /*L"订单"*/}
-    ,{("\x2C\x67\x30\x57\x0") /*L"本地"*/}    
+    "\xE5\x67\xE2\x8B\x0\x0" /*L"查询"*/
+    "\xA2\x8B\x55\x53\x0\x0" /*L"订单"*/
+    "\x2C\x67\x30\x57\x0\x0" /*L"本地"*/    
 };
 #define QYMAX_MENU_QUERY_ITEM  3
 U8 * g_strQuery[QYMAX_MENU_QUERY_ITEM] ;
@@ -2039,6 +2131,10 @@ void InitMenuStr(void)
 
 U32 g_R9Val;
 
+void QyOnFocus(int wndType, U16 srcid)
+{   
+}   
+
 void QinYiAppMain(void)
 {           
 
@@ -2049,6 +2145,7 @@ void QinYiAppMain(void)
     if( LoadBtFile() )
         return;
 #endif    
+//	g_QinYiFnxOnfocus = QyOnFocus;
 
     LoadQySetting(g_SettingProf); 
     InitMenuStr();
@@ -2058,6 +2155,9 @@ void QinYiAppMain(void)
 
  /*****************************************************************************/
 
+void TraceMainTitleEx(int line)
+{
+}
 
 
 

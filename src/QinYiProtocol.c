@@ -20,12 +20,15 @@ typedef struct tag_nob //net object
 
 typedef void * HCMD;
 
- 
+#define IsValidCode()     IsValidCodeEx(__LINE__, g_RfBarCode)
+#define RecheckCode(str)  IsValidCodeEx(__LINE__, str)
+
 void QyAppendCmdItem(HCMD  hcmd, U16 *strParam);
 void PostToSystemNob(void * nob);
 void QyAsnchTaskEntry(void);
 void QyAsnchCheckEntry(void);
 void ClearAsynNob(void);
+int IsValidCodeEx(int line, U16 * pcode);
 
 
 
@@ -592,7 +595,9 @@ int QyPrepareSignRecptCmd(U16 * SignName, int totals,QY_RDID * pIds, FuncCmdAck 
         QyAppendCmdHex(hcmd, totals, L'\t');
         for( i=0; i<totals; i++)
         {
-            mmi_asc_n_to_wcs(Strrdid, (S8*)pIds[i].Rdid, MAX_RDID_LEN+1),
+            mmi_asc_n_to_wcs(Strrdid, (S8*)pIds[i].Rdid, MAX_RDID_LEN+1);
+            if( RecheckCode(Strrdid) == 0 )
+                return -1;
             QyAppendParmItem(hcmd, Strrdid);
         }
         QyWrapPackage(hcmd );
@@ -622,7 +627,7 @@ int QyPrepareSignRecptCmd(U16 * SignName, int totals,QY_RDID * pIds, FuncCmdAck 
     17	家中无人               9. 家中无人
     16	其他                   10.其他*/
 
-U8 g_ProblemTextList[] = {
+MENU_TEXT g_ProblemTextList[] = {
 "\x31\x0\x2E\x0\x35\x75\xDD\x8B\xE0\x65\xBA\x4E\xA5\x63\x2C\x54\x0\x0" /*L"1.电话无人接听"*/
 "\x32\x0\x2E\x0\xE5\x67\xE0\x65\x64\x6B\xBA\x4E\x0\x0" /*L"2.查无此人"*/
 "\x33\x0\x2E\x0\x30\x57\x40\x57\xD\x4E\xE6\x8B\x0\x0" /*L"3.地址不详"*/
@@ -636,7 +641,7 @@ U8 g_ProblemTextList[] = {
 "\0\0\0\0"
 };
 
-const int g_problem_map[]= {16,14,3, 1, 5, 12, 6, 7, 15, 17, 16,11};
+const int g_problem_map[]= {16,14,3, 1, 5, 12, 6, 7, 15, 17, 16,11}; //index 0 is wrongly data!
 #elif (VENDOR_NAME == VENDOR_NENGDA)
 /*
 18	部分快件签收    1.  ---------------终端顺序
@@ -657,7 +662,7 @@ const int g_problem_map[]= {16,14,3, 1, 5, 12, 6, 7, 15, 17, 16,11};
 17	退件            16.
 12	其他            17.
 */
-U8 g_ProblemTextList[] = 
+MENU_TEXT g_ProblemTextList[] = 
 {
 "\x31\x0\x2E\x0\xE8\x90\x6\x52\xEB\x5F\xF6\x4E\x7E\x7B\x36\x65\x0\x0"  /*L"1.部分快件签收"*/
 "\x32\x0\x2E\x0\xE5\x67\xE0\x65\x64\x6B\xBA\x4E\x0\x0"  /*L"2.查无此人"*/
@@ -678,7 +683,37 @@ U8 g_ProblemTextList[] =
 "\x31\x0\x37\x0\x2E\x0\x76\x51\xD6\x4E\x0\x0" /*L"17.其他"*/
 "\0\0\0\0"
 };
-const int g_problem_map[]= {12,18,3,13,4,1,10,11,9,5,2,6,16,8,15,7,17,12};
+const int g_problem_map[]= {12,18,3,13,4,1,10,11,9,5,2,6,16,8,15,7,17,12};//index 0 is wrongly data!
+
+#elif (VENDOR_NAME == VENDOR_MEIDA )
+/*
+上传---1  L"1 .错发件"                                1---终端排序
+       2  L"2. 破损件"                                2
+       4  L"3. 超派无点件"                            3
+       7  L"4. 地址电话不详或不对"                    4
+       9  L"5. 拒付款"                                5
+       10 L"6. 公司搬迁地址电话更改"                  6
+       12 L"7. 收件人联系不上或空号"                  7
+       13 L"8. 客户拒收或要求验货"                    8
+       14 L"9. 自取件"                                9
+       15 L"10.周末客户休息延时派送"                  10
+*/
+MENU_TEXT g_ProblemTextList[] = 
+{
+"\x31\x0\x20\x0\x2E\x0\x19\x95\xD1\x53\xF6\x4E\x0\x0" /*L"1 .错发件"*/                   
+"\x32\x0\x2E\x0\x20\x0\x34\x78\x5F\x63\xF6\x4E\x0\x0" /*L"2. 破损件"*/                   
+"\x33\x0\x2E\x0\x20\x0\x85\x8D\x3E\x6D\xE0\x65\xB9\x70\xF6\x4E\x0\x0" /*L"3. 超派无点件"*/               
+"\x34\x0\x2E\x0\x20\x0\x30\x57\x40\x57\x35\x75\xDD\x8B\xD\x4E\xE6\x8B\x16\x62\xD\x4E\xF9\x5B\x0\x0" /*L"4. 地址电话不详或不对"*/       
+"\x35\x0\x2E\x0\x20\x0\xD2\x62\xD8\x4E\x3E\x6B\x0\x0" /*L"5. 拒付款"*/                   
+"\x36\x0\x2E\x0\x20\x0\x6C\x51\xF8\x53\x2C\x64\xC1\x8F\x30\x57\x40\x57\x35\x75\xDD\x8B\xF4\x66\x39\x65\x0\x0" /*L"6. 公司搬迁地址电话更改"*/     
+"\x37\x0\x2E\x0\x20\x0\x36\x65\xF6\x4E\xBA\x4E\x54\x80\xFB\x7C\xD\x4E\xA\x4E\x16\x62\x7A\x7A\xF7\x53\x0\x0" /*L"7. 收件人联系不上或空号"*/     
+"\x38\x0\x2E\x0\x20\x0\xA2\x5B\x37\x62\xD2\x62\x36\x65\x16\x62\x81\x89\x42\x6C\x8C\x9A\x27\x8D\x0\x0" /*L"8. 客户拒收或要求验货"*/       
+"\x39\x0\x2E\x0\x20\x0\xEA\x81\xD6\x53\xF6\x4E\x0\x0" /*L"9. 自取件"*/                   
+"\x31\x0\x30\x0\x2E\x0\x68\x54\x2B\x67\xA2\x5B\x37\x62\x11\x4F\x6F\x60\xF6\x5E\xF6\x65\x3E\x6D\x1\x90\x0\x0" /*L"10.周末客户休息延时派送"*/     
+
+};
+const int g_problem_map[]= {1,1,2,4,7,9,10,12,13,14,15};//index 0 is wrongly data!
+
 #endif 
 
 U8 * GetProblemTextByIndex(int index)
@@ -719,6 +754,8 @@ int QyPrepareIssueCmd(PROBLEM_JOUNOR * pProblemJouner, int totals,QY_RDID * pIds
         for( i=0; i<totals; i++)
         {
             mmi_asc_n_to_wcs(Strrdid, (S8*)pIds[i].Rdid, MAX_RDID_LEN+1);
+            if( RecheckCode(Strrdid) == 0 )
+                return -1;
             if( i == 0 )
             {
                 QyAppendCmdItem(hcmd, Strrdid);
@@ -1662,13 +1699,17 @@ typedef int (*nob_fnx)(int );
 int OnQueryExpIdStatu(int ret)
 {
     NOB_ACK  ack_info;
+    ack_info.pbuf = NULL;
     if( ret > 0 )
     {
         GetAckHandleEx( &ack_info);
     }
     ack_info.result = ret;
     OnUiCmdFinsh(&ack_info);   
-    FreeAckHandle(ack_info.pbuf);     
+    if( ret > 0 && ack_info.pbuf )
+    {
+        FreeAckHandle(ack_info.pbuf);     
+    }
     return 1;
 }
 
