@@ -3,7 +3,6 @@
 
 #define MAX_CMD_BUFF_LEN  1024
 
-#define ANY_SIZE  1
 
 typedef struct tag_nob //net object
 {
@@ -29,7 +28,8 @@ void QyAsnchTaskEntry(void);
 void QyAsnchCheckEntry(void);
 void ClearAsynNob(void);
 int IsValidCodeEx(int line, U16 * pcode);
-
+int Decode(int fsh, void * buff, int buf_sz, void * pout)	;
+UINT WriteBillJunor(int fsh );
 
 
 int g_CmdType;
@@ -100,9 +100,26 @@ void QyAppendCmdInt(HCMD hcmd,int val, U16 spit)
     LPNOB  pNob = (LPNOB)hcmd;
     if(pNob && pNob->pCmdCurPtr )
     {
-        kal_wsprintf((U16 *)(pNob->pCmdCurPtr), "%c%08d",spit, val); 
+        kal_wsprintf((U16 *)(pNob->pCmdCurPtr), "%c%d",spit, val); 
         pNob->pCmdCurPtr = pNob->pCmdCurPtr + kal_wstrlen(pNob->pCmdCurPtr);
     }    
+}
+void QyAppendCmdCur(HCMD hcmd, int val, U16 spit)
+{
+    U16 * dot;
+    LPNOB  pNob = (LPNOB)hcmd;
+    if( val <  100 )
+    {
+        kal_wsprintf((U16 *)(pNob->pCmdCurPtr), "%c%03d",spit, val); 
+    }
+    else
+    {
+        kal_wsprintf((U16 *)(pNob->pCmdCurPtr), "%c%d",spit, val); 
+    }
+    pNob->pCmdCurPtr = pNob->pCmdCurPtr + kal_wstrlen(pNob->pCmdCurPtr);        
+    dot = pNob->pCmdCurPtr-2;
+    dot[2] = dot[1], dot[1]= dot[0], dot[0] ='.';
+    pNob->pCmdCurPtr++;
 }
 
 void QyAppendCmdHex(HCMD hcmd,int val, U16 spit)
@@ -595,9 +612,8 @@ int QyPrepareSignRecptCmd(U16 * SignName, int totals,QY_RDID * pIds, FuncCmdAck 
         QyAppendCmdHex(hcmd, totals, L'\t');
         for( i=0; i<totals; i++)
         {
-            mmi_asc_n_to_wcs(Strrdid, (S8*)pIds[i].Rdid, MAX_RDID_LEN+1);
-            if( RecheckCode(Strrdid) == 0 )
-                return -1;
+            mmi_asc_n_to_wcs(Strrdid, (S8*)pIds[i].LaserId, MAX_RDID_LEN+1);
+            RecheckCode(Strrdid) ;
             QyAppendParmItem(hcmd, Strrdid);
         }
         QyWrapPackage(hcmd );
@@ -606,6 +622,18 @@ int QyPrepareSignRecptCmd(U16 * SignName, int totals,QY_RDID * pIds, FuncCmdAck 
     }
     return 0;
 
+}
+
+int ChkNewBill(FuncCmdAck f)
+{
+    HCMD hcmd =  QyInitialComamnd(CMD_CHK_BILL,CMD_CHKBILL_REQ,0) ;
+    if(hcmd)
+    {
+        QyWrapPackage(hcmd );
+        QySendPackage(hcmd, f, 0);
+        return 1;
+    }
+    return 0;
 }
 
 //1004`0100`业务员编号`Date&Time
@@ -753,7 +781,7 @@ int QyPrepareIssueCmd(PROBLEM_JOUNOR * pProblemJouner, int totals,QY_RDID * pIds
         //QyAppendCmdInt(totals, L'\t');//运单总数 
         for( i=0; i<totals; i++)
         {
-            mmi_asc_n_to_wcs(Strrdid, (S8*)pIds[i].Rdid, MAX_RDID_LEN+1);
+            mmi_asc_n_to_wcs(Strrdid, (S8*)pIds[i].LaserId, MAX_RDID_LEN+1);
             if( RecheckCode(Strrdid) == 0 )
                 return -1;
             if( i == 0 )
@@ -780,36 +808,75 @@ int QyPrepareIssueCmd(PROBLEM_JOUNOR * pProblemJouner, int totals,QY_RDID * pIds
 
 }
 
-const int jun_size[] = {0, sizeof(RECIVE_JUNOR), sizeof(SIGN_JUNOR), sizeof(PROBLEM_JOUNOR)};
-TASK_HEADER * CreateTask(QYFILE_TYPE ftype, int nInitalIdMax)
+const int jun_size[] = {0, 0, sizeof(SIGN_JUNOR), sizeof(PROBLEM_JOUNOR)};
+UINT GetPerIdSize(int ftype)
+{
+    switch(ftype )
+    {
+    case QYF_RECIVE:
+        return sizeof(BILL_PROPERTY);
+        break;
+    case QYF_SIGN:
+    case QYF_PROBLEM:
+        return sizeof(QY_RDID);
+        break;
+    default:
+        break;
+    }
+    return 0;
+}
+
+
+TASK_HEADER * CreateTask(QYFILE_TYPE ftype, int id_buff_size)
 {
     TASK_HEADER * pNewTask = NULL;
     if( (ftype &= QYF_FILE_MASK) < QYF_MAX_TYPE )
     {
-        if(nInitalIdMax == 0 ) nInitalIdMax = DEF_ID_MAX_BUFF;
+        int valid = 1;
+        if(id_buff_size == 0 ) id_buff_size = DEF_ID_BUFF_SIZE;
         
         pNewTask = (TASK_HEADER *)QyMalloc(sizeof(TASK_HEADER) ); 
+        if( pNewTask == NULL ) return NULL;
+        
         memset( pNewTask, 0 , sizeof(TASK_HEADER));
         if( pNewTask )
         {
-            QY_RDID* pIds= (QY_RDID*)QyMalloc(sizeof(QY_RDID)*nInitalIdMax);
-            if( pIds )
+            int per_size = GetPerIdSize(ftype);   
+            if( id_buff_size != -1 )
             {
-                pNewTask->pJunor = QyMalloc(jun_size[ftype]);
-                if( pNewTask->pJunor )
+                QY_RDID* pIds= (QY_RDID*)QyMalloc(id_buff_size);
+                if( pIds )
                 {
-                    memset(pIds, 0 , sizeof(QY_RDID)*nInitalIdMax);    
-                    memset( pNewTask->pJunor, 0 ,  jun_size[ftype]); 
-                    GetDateTime(&pNewTask->GenTime);
-                    pNewTask->MaxItms = nInitalIdMax;
-                    pNewTask->totals = 0;
-                    pNewTask->LenJunor = jun_size[ftype] ;
-                    pNewTask->filetype = ftype;
+                    memset(pIds, 0 , id_buff_size);                        
                     pNewTask->pRdId = pIds;
                 }
-            } 
+
+                else
+                {
+                    valid = 0;
+                }
+            }
+            else
+            {
+                id_buff_size = 0;
+            }
+            
+            if( jun_size[ftype] )
+            {
+                pNewTask->pJunor = QyMalloc(jun_size[ftype]);
+                if( pNewTask->pJunor == NULL ) valid = 0;
+                memset( pNewTask->pJunor, 0 ,  jun_size[ftype]); 
+            }
+            if( valid )
+            {
+                GetDateTime(&pNewTask->GenTime);
+                pNewTask->MaxItms = id_buff_size/per_size;
+                pNewTask->totals = 0;
+                pNewTask->LenJunor = jun_size[ftype] ;
+                pNewTask->filetype = ftype;
+            }
         }
-        if(pNewTask == NULL || pNewTask->pJunor == NULL)
+        if( valid  == 0 && pNewTask != NULL )
         {
             FreeTask(pNewTask);
             pNewTask = NULL;
@@ -839,7 +906,7 @@ static int LocationRdid(TASK_HEADER * pNewTask, TYPE_RDID * ptarid)
     QY_RDID* pIds = pNewTask->pRdId;
     for(i = 0 ;i<pNewTask->totals; i++)
     {
-        if( StrnCmp((S8*)ptarid, (S8*)pIds[i].Rdid, MAX_RDID_LEN) == 0 )
+        if( StrnCmp((S8*)ptarid, (S8*)pIds[i].LaserId, MAX_RDID_LEN) == 0 )
             return i;
     }
     return ERR_NOT_FONTD;
@@ -849,10 +916,11 @@ int ReallocRdidBuff(TASK_HEADER * pNewTask)
 {
     QY_RDID* pIds;
     int origMax = pNewTask->MaxItms;
-    pIds= (QY_RDID*)QyMalloc(sizeof(QY_RDID)*(origMax*2));
+    int per_size = GetPerIdSize(pNewTask->filetype);            
+    pIds= (QY_RDID*)QyMalloc(per_size*(origMax*2));
     if( pIds )
     {
-        memcpy(pIds, pNewTask->pRdId, sizeof(QY_RDID)*pNewTask->totals);
+        memcpy(pIds, pNewTask->pRdId, per_size*pNewTask->totals);
         QyFree(pNewTask->pRdId );
         pNewTask->MaxItms = origMax*2;
         pNewTask->pRdId = pIds;
@@ -864,12 +932,15 @@ int ReallocRdidBuff(TASK_HEADER * pNewTask)
 int  AppendRdId(TASK_HEADER * ptask, U16 * pstrRdid)
 {
     QY_RDID  RDID;
+	QY_RDID  * prdid;
+    int per_size;
     if( ptask == NULL) return ERR_INVLD_PARMA;
 
-    memset(RDID.Rdid, 0, sizeof(QY_RDID));
-    mmi_wcs_n_to_asc((S8 *)RDID.Rdid, (U16*)pstrRdid, MAX_RDID_LEN*sizeof(U16)); //mmi_ucs2_n_to_asc
+    per_size = GetPerIdSize(ptask->filetype);            
+    memset(RDID.LaserId, 0, per_size);
+    mmi_wcs_n_to_asc((S8 *)RDID.LaserId, (U16*)pstrRdid, MAX_RDID_LEN*sizeof(U16)); //mmi_ucs2_n_to_asc
 
-    if( LocationRdid(ptask, RDID.Rdid) >= 0 )
+    if( LocationRdid(ptask, RDID.LaserId) >= 0 )
         return ERR_RDID_REPEAT;
 
     if( ptask->totals + 1 >= ptask->MaxItms  )
@@ -877,7 +948,9 @@ int  AppendRdId(TASK_HEADER * ptask, U16 * pstrRdid)
         if( ReallocRdidBuff(ptask) != QY_SUCCESS )
             return ERR_NOMORE_MEMORY;
     }
-    memcpy(&ptask->pRdId[ptask->totals] , RDID.Rdid, sizeof(QY_RDID));
+
+	prdid = (QY_RDID  *)ptask->pRdId;
+    memcpy(&prdid[ptask->totals] , RDID.LaserId, per_size);
     ptask->totals ++;
     return ptask->totals;
 }
@@ -885,20 +958,24 @@ int  AppendRdId(TASK_HEADER * ptask, U16 * pstrRdid)
 int  RemoveRdId(TASK_HEADER * ptask, U16 * pstrRdid)
 {
     QY_RDID  RDID;
+	QY_RDID  * prdid;
     int location = ERR_NOT_FONTD;
+    int per_size ;            
     if( ptask == NULL) return ERR_INVLD_PARMA;
 
-    memset(&RDID, 0, sizeof(QY_RDID));
-    mmi_wcs_n_to_asc((S8*)RDID.Rdid, (U16*)pstrRdid, MAX_RDID_LEN*sizeof(U16));
+    per_size = GetPerIdSize(ptask->filetype);
+    memset(&RDID, 0, per_size);
+    mmi_wcs_n_to_asc((S8*)RDID.LaserId, (U16*)pstrRdid, MAX_RDID_LEN*sizeof(U16));
 
     
-    location = LocationRdid(ptask, RDID.Rdid);
+    location = LocationRdid(ptask, RDID.LaserId);
 
     if( location < 0 )  return ERR_NOT_FONTD;
 
     ptask->totals--;
-    memcpy(&ptask->pRdId[location], &ptask->pRdId[ptask->totals],sizeof(QY_RDID));
-    memset(&ptask->pRdId[ptask->totals],  0  , sizeof(QY_RDID));
+	prdid = (QY_RDID  *)ptask->pRdId;
+    memcpy(&prdid[location], &prdid[ptask->totals],per_size);
+    memset(&prdid[ptask->totals],  0  , per_size);
     return QY_SUCCESS;
 }
 
@@ -920,7 +997,7 @@ static int FindQyTaskFile(QYFILE_TYPE ftype,  int bsave)
 {
     U16 fname[64];
     U16 szSearch[64];                 //FS_Pattern_Struct list_file[1];
-    int mode = bsave ? FS_READ_WRITE : FS_READ_ONLY;
+    int mode = bsave ? (FS_READ_WRITE): FS_READ_ONLY;
     
     FS_HANDLE fs_h = -1;
 
@@ -964,30 +1041,48 @@ static int FindQyTaskFile(QYFILE_TYPE ftype,  int bsave)
 
 }
 
+int WriteJunor(int fsh, TASK_HEADER * ptask)
+{
+    UINT wt = 0;
+    switch(ptask->filetype )
+    {
+    case QYF_RECIVE:
+        wt = WriteBillJunor(fsh);
+        break;
+    case QYF_SIGN:
+    case QYF_PROBLEM:
+         FS_Write(fsh, ptask->pJunor,  ptask->LenJunor, &wt);
+        break;
+    default:
+        break;
+    }
+    return wt;
+}
 
 int  SaveTask(TASK_HEADER * ptask)
 {
+    int per_size = 0;
     int ret = ERR_FILE_NOT_OPEN;
     int fs_h  ;
     if( ptask == NULL ) return ERR_INVLD_PARMA;
     fs_h = FindQyTaskFile(ptask->filetype, 1);
     if( fs_h > 0  )
-    {
+    {  
         U32 wdb = 0;
         UINT fsStartPos = FS_Seek(fs_h, 0, FS_FILE_END);
         
-        ptask->tsksize = sizeof(TASK_HEADER)+ptask->LenJunor+sizeof(QY_RDID)*ptask->totals-8;
-        mmi_asc_n_to_wcs(ptask->taskname, (S8*)ptask->pRdId[0].Rdid, MAX_RDID_LEN+1);//mmi_asc_n_to_ucs2
+        per_size = GetPerIdSize(ptask->filetype);
+        ptask->tsksize = sizeof(TASK_HEADER)+ptask->LenJunor+per_size*ptask->totals-8;
 
         ret = ERR_FILE_WRITING;
         FS_Write(fs_h, ptask, sizeof(TASK_HEADER)-8, &wdb);    // sub 8 means not store pointers
         if( wdb != sizeof(TASK_HEADER)-8 ) goto endf;
-        
-        FS_Write(fs_h, ptask->pJunor, ptask->LenJunor, &wdb);
+
+        wdb = WriteJunor(fs_h, ptask );        
         if( wdb != ptask->LenJunor ) goto endf;
-        
-        FS_Write(fs_h, ptask->pRdId,  sizeof(QY_RDID)*ptask->totals, &wdb);     
-        if( wdb != sizeof(QY_RDID)*ptask->totals ) goto endf;
+
+        FS_Write(fs_h, ptask->pRdId,  per_size*ptask->totals, &wdb);     
+        if( wdb != (UINT)per_size*ptask->totals ) goto endf;
         
         FS_Commit(fs_h);
         ret =  QY_SUCCESS;
@@ -1065,21 +1160,32 @@ TASK_HEADER *  LoadTask(int ftype, int index)
         int fsh  = OpenTasksFile( ftype,  index, FS_READ_ONLY);
         if( fsh > 0 )
         {
+            int per_size = 0;
             UINT rd;
             U32 offset = g_TaskDump->offset[index];
             FS_Seek(fsh, offset, FS_FILE_BEGIN);
             FS_Read(fsh, &offset, 4, &rd);
             if( rd == 4)
             {
-                ptask = CreateTask(ftype, (offset)/sizeof(QY_RDID));
+                ptask = CreateTask(ftype, offset);
                 FS_Read(fsh, &ptask->filetype, (sizeof(TASK_HEADER)-4-8), &rd);  // sub 8 means not store pointers. 4 is read task size already
                 if( rd < (sizeof(TASK_HEADER)-4-8)) 
                 {
                     FreeTask(ptask);
                     return NULL;
                 }
+                per_size = GetPerIdSize(ptask->filetype);    
+                if( ptask->pJunor == NULL )
+                {
+                    ptask->pJunor = QyMalloc(ptask->LenJunor);
+                    if( ptask->pJunor == NULL )
+                    {
+                        FreeTask(ptask);
+                        return NULL;
+                    }                        
+                }
                 FS_Read(fsh, ptask->pJunor,ptask->LenJunor, &rd );
-                FS_Read(fsh, ptask->pRdId, ptask->totals*sizeof(QY_RDID), &rd);
+                FS_Read(fsh, ptask->pRdId, ptask->totals*per_size, &rd);
             }
             FS_Close(fsh);
         }
@@ -1097,6 +1203,173 @@ void FreeTask(TASK_HEADER * ptask)
     }
 }
 
+typedef struct _pro_bill_1007
+{
+    U16 bill_no[MAX_RDID_LEN];
+    U16 WATER[3];
+    U16 PayMethod[2];
+    U16 cost[13];
+    U16 cash[13];
+    U16 Insur[13];
+    U16 IsSms[2];
+    U16 SmsId[20];
+}PRO_BILL_1007;
+
+extern WSTR g_newBillDetal[];
+
+int SendReciveBill(BILL_PREP_TBL * bphdr, BILL_PROPERTY * pids, FuncCmdAck f)
+{
+    WSTR pDetail;
+    HCMD hcmd = QyInitialComamnd(CMD_RECIVE_BILL,CMD_NORMAL_REQ,sizeof(PRO_BILL_1007)*bphdr->Total + 200);
+
+
+    if( hcmd )
+    {
+        U16 tmp[32];
+        int i;
+        
+        pDetail = (WSTR)bphdr->prep;
+        for(i=0; i<MAX_NEW_BILL_ITEM;i++)
+        {
+            g_newBillDetal[i] = pDetail;
+            pDetail += kal_wstrlen(pDetail)+1;
+        }
+
+        mmi_asc_n_to_wcs(tmp, (S8*)bphdr->guid, MAX_GUID_LEN );
+        QyAppendCmdItem(hcmd, tmp);                    //client id 
+        QyAppendCmdHex(hcmd, bphdr->Total, L'\t');     //total  
+
+        kal_wsprintf(tmp, "01");    
+        QyAppendParmItem(hcmd, tmp);                   //scan type
+
+
+        QyAppendParmItem(hcmd,g_newBillDetal[NB_GUID]); //GUID water
+
+        QyAppendParmItem(hcmd,g_newBillDetal[NB_SEND_NAME]); //SENDER NAME
+        QyAppendParmItem(hcmd,g_newBillDetal[NB_GUID]); //GUID
+
+        for( i=0; i<bphdr->Total; i++)
+        {
+            mmi_asc_n_to_wcs(tmp, (S8*)pids->Barcode, MAX_GUID_LEN );
+            QyAppendParmItem(hcmd, tmp);  //Bill Num
+
+            if( pids->water == -1 )
+                tmp[0]= 0;
+            else
+                kal_wsprintf(tmp, "%d", pids->water);
+            QyAppendParmItem(hcmd, tmp);  //Oprator water
+           
+
+            kal_wsprintf(tmp, "0%d",pids->payeway+1);
+            QyAppendParmItem(hcmd, tmp);
+            QyAppendCmdCur(hcmd, pids->cost, L'\t');
+                
+            tmp[0] = 0;
+            if( pids->cash != -1 )
+                QyAppendCmdCur(hcmd, pids->cash, L'\t');
+            else
+                QyAppendParmItem(hcmd, tmp);
+            
+            if( pids->insurence != -1 )
+                QyAppendCmdCur(hcmd, pids->insurence, L'\t');
+            else
+                QyAppendParmItem(hcmd, tmp);
+
+            tmp[0] ='0', tmp[2]= 0;
+            if(  pids->sms_no[0] )
+            {
+                tmp[1] = '1' ;
+                QyAppendParmItem(hcmd, tmp);
+                mmi_asc_n_to_wcs(tmp, (S8*)pids->sms_no, QY_PHONE_MAX_LEN );
+                QyAppendParmItem(hcmd, tmp);
+            }
+            else
+            {
+                tmp[1] = '0' ;
+                QyAppendParmItem(hcmd, tmp);
+                tmp[1] = 0;
+                QyAppendParmItem(hcmd, tmp);
+            }
+            
+        }
+        QyWrapPackage(hcmd );
+        QySendPackage(hcmd, f, 0);
+    }
+    return 1;
+}
+
+int SendNoOrderBill(BILL_PREP_TBL * bphdr, BILL_PROPERTY * pids, FuncCmdAck f)
+{
+    HCMD hcmd = QyInitialComamnd(CMD_NOORDER_BILL,CMD_NORMAL_REQ,sizeof(PRO_BILL_1007)*bphdr->Total + 200);
+    if( hcmd )
+    {
+        U16 tmp[32];
+        int i;
+        mmi_asc_n_to_wcs(tmp, (S8*)bphdr->guid, MAX_GUID_LEN );
+        QyAppendCmdItem(hcmd, tmp);
+        QyAppendCmdHex(hcmd, bphdr->Total, L'\t');
+
+        kal_wsprintf(tmp, "01");
+        QyAppendParmItem(hcmd, tmp);
+
+        for( i=0; i<bphdr->Total; i++)
+        {
+            mmi_asc_n_to_wcs(tmp, (S8*)pids->Barcode, MAX_GUID_LEN );
+            QyAppendParmItem(hcmd, tmp);
+
+            kal_wsprintf(tmp, "0%d",pids->payeway+1);
+            QyAppendParmItem(hcmd, tmp);
+            QyAppendCmdCur(hcmd, pids->cost, L'\t');
+                
+            tmp[0] = 0;
+            if( pids->cash != -1 )
+                QyAppendCmdCur(hcmd, pids->cash, L'\t');
+            else
+                QyAppendParmItem(hcmd, tmp);
+            
+            if( pids->insurence != -1 )
+                QyAppendCmdCur(hcmd, pids->insurence, L'\t');
+            else
+                QyAppendParmItem(hcmd, tmp);
+
+            tmp[0] ='0', tmp[2]= 0;
+            if(  pids->sms_no[0] )
+            {
+                tmp[1] = '1' ;
+                QyAppendParmItem(hcmd, tmp);
+                mmi_asc_n_to_wcs(tmp, (S8*)pids->sms_no, QY_PHONE_MAX_LEN );
+                QyAppendParmItem(hcmd, tmp);
+            }
+            else
+            {
+                tmp[1] = '0' ;
+                QyAppendParmItem(hcmd, tmp);
+                tmp[1] = 0;
+                QyAppendParmItem(hcmd, tmp);
+            }
+            
+        }
+        QyWrapPackage(hcmd );
+        QySendPackage(hcmd, f, 0);
+    }
+    return 1;
+}
+
+int QyPrepareBillCmd(BILL_PREP_TBL * pBillHeader, BILL_PROPERTY * pIds, FuncCmdAck f)
+{
+    switch(pBillHeader->type)
+    {
+    case (QYF_RECIVE|QYF_ACCEPT):
+        SendReciveBill(pBillHeader, pIds,f );
+        break;
+    case (QYF_RECIVE|QYF_CREATE):
+        SendNoOrderBill(pBillHeader, pIds,f );
+        break;
+    }
+    return 1;
+}
+
+
 int  SendTask(TASK_HEADER * ptask, int bpromopt, FuncCmdAck f)
 {
     if( ptask == NULL ) return ERR_INVLD_PARMA;
@@ -1107,6 +1380,9 @@ int  SendTask(TASK_HEADER * ptask, int bpromopt, FuncCmdAck f)
         break;
     case QYF_PROBLEM:
         return QyPrepareIssueCmd(ptask->pJunor, ptask->totals, ptask->pRdId, f);
+    case QYF_RECIVE:
+        return QyPrepareBillCmd(ptask->pJunor, ptask->pRdId, f);
+        break;
     }
     ClearAsynNob();
     return 0;
@@ -1130,7 +1406,7 @@ U16 g_pAsynTaskExtChar;
 
 
 
-int DumpTaskFile(int fsh, int index)
+int DumpTaskIndex(int fsh, int index)
 {
      UINT pos = 0 , len,  nvalidf = 0;
      QYF_NODE head;
@@ -1163,7 +1439,7 @@ int DumpTaskFile(int fsh, int index)
      return nvalidf;
 }
 
-int DumpTaskByFtype(QYFILE_TYPE ftype)
+int DumpTaskIndexList(QYFILE_TYPE ftype)
 {
     int index , fsh, ret = 0;
     U16 fname[32];    
@@ -1179,7 +1455,7 @@ int DumpTaskByFtype(QYFILE_TYPE ftype)
         fsh = OpenQyFile(QY_USER, fname, FS_READ_ONLY);
         if( fsh > 0 )
         {
-            ret = DumpTaskFile(fsh, index); 
+            ret = DumpTaskIndex(fsh, index); 
              if( ret <= 0)
              {
                 FS_Close(fsh);
@@ -1219,7 +1495,7 @@ int FindAsynTask(int fsh,QYF_NODE *node)
 
 }
 
-const int g_cmdReqAck[] = {CMD_RECIVE, CMD_SIGN_RECTP, CMD_PROBLEM};
+const int g_cmdReqAck[] = {CMD_RECIVE_BILL, CMD_SIGN_RECTP, CMD_PROBLEM};
 int OnFishAsynSend(int ret)
 {
     int fsh = 0;
@@ -1229,7 +1505,8 @@ int OnFishAsynSend(int ret)
         void * hack = GetAckHandle(&cmd, &err,&field,NULL);
         FreeAckHandle(hack);
 
-        if( g_pAsynTask && cmd == g_cmdReqAck[(g_pAsynTask->filetype&QYF_FILE_MASK) - 1])
+        if( g_pAsynTask && (cmd == g_cmdReqAck[(g_pAsynTask->filetype&QYF_FILE_MASK) - 1] 
+            || ((g_pAsynTask->filetype&QYF_FILE_MASK) == QYF_RECIVE && cmd == CMD_NOORDER_BILL )))
         {
             U16 flag = ( err == 0)?  QYF_SENT :  QYF_FAILE;
             U16 fname[64];
@@ -1274,24 +1551,23 @@ int AsynSendTask(QYFILE_TYPE ftype)
             {
                 if( node.tsksize )
                 {
+                    int idbuf_size = 0;
                     if( g_pAsynTask ) QyFree(g_pAsynTask);
+
                     
-                    g_pAsynTask = CreateTask(ftype, (node.tsksize)/sizeof(QY_RDID));
+                    g_pAsynTask = CreateTask(ftype, node.tsksize);
+                    if( g_pAsynTask  == NULL ) return 0;
+                    idbuf_size = node.tsksize - g_pAsynTask->LenJunor - sizeof(TASK_HEADER)+4;
                     FS_Read(fsh, g_pAsynTask->taskname,sizeof(TASK_HEADER)-6-8, &rlen );
                     FS_Read(fsh, g_pAsynTask->pJunor,g_pAsynTask->LenJunor, &rlen );
-                    FS_Read(fsh, g_pAsynTask->pRdId, g_pAsynTask->totals*sizeof(QY_RDID), &rlen);
-                    //read header
-                    //read jouner
-                    //read rdid
+                    FS_Read(fsh, g_pAsynTask->pRdId, idbuf_size, &rlen);
                     FS_Close(fsh);
                     if( rlen > 0 )
                     {
                         g_pAsynTaskExtChar = index;
                         g_pAsynTask->tsksize = node.tsksize;
                         g_pAsynTask->filetype = node.filetype;
-                        g_CmdType = 1;
                         SendTask(g_pAsynTask, 0, OnFishAsynSend);   
-                        g_CmdType = 0;
                     }                    
                     ret = 1;
                 }
@@ -1303,6 +1579,7 @@ int AsynSendTask(QYFILE_TYPE ftype)
     }
     return ret;
 }
+
 
 
 
@@ -1337,19 +1614,272 @@ void ResetAsyCheckTimer(void)
     StartTimer(ASYN_CHECK,g_SettingProf->AutoConnectTime*1000,QyAsnchCheckEntry);
 }
 
+//////////////////////////////////////////////////////////////////////////////////////
+int GetBillTotal(BYTE * buff)
+{
+    S32 total = 0;
+    mmi_ucs2toi((S8*)buff, &total, NULL);
+    return total;
+}
+
+int SaveNewBill(BYTE * pbuff, UINT len)
+{
+    int ret = 0;
+    int  i, total = GetBillTotal(pbuff) ;
+    if( total != 0 )
+    {
+        int fsh = OpenQyFile(QY_USER,L"NewBill.bin", FS_READ_WRITE|FS_CREATE);
+        if( fsh > 0 )
+        {
+            WSTR pstr = (WSTR ) pbuff;
+            pstr += kal_wstrlen(pstr)+1; //skip total filed, then parse each bill
+            
+            FS_Seek(fsh, 0 ,FS_FILE_END);
+            for( i=0 ; i< total ; i++)
+            {
+                UINT wt;
+                U16 flag = QYF_RECIVE;
+                U16 flen, j;
+                pbuff = (BYTE *)pstr;
+                
+                for( j=0 ; j<MAX_NEW_BILL_ITEM; j++)
+                {
+                    wt = (kal_wstrlen(pstr)+1);                
+                    pstr += wt;
+                }
+                flen = (BYTE *)pstr  - pbuff;
+                FS_Write(fsh, &flen, sizeof(U16), &wt); if( wt != sizeof(U16)) break;
+                FS_Write(fsh, &flag, sizeof(U16), &wt); if( wt != sizeof(U16)) break;
+                FS_Write(fsh, pbuff, flen, &wt); if( wt != flen) break;
+                FS_Write(fsh, &flag, sizeof(U16), &wt);
+            }
+            ret = 1;
+            FS_Close(fsh);
+        }
+    }
+    return 0;
+}
+
+int FindNewBill(UINT * bill_size)
+{
+    int fsh = OpenQyFile(QY_USER,L"NewBill.bin", FS_READ_ONLY);
+    if( fsh>0 )
+    {
+        FS_GetFileSize(fsh, bill_size); 
+        FS_Seek(fsh, 0 ,FS_FILE_BEGIN);
+    }
+    return fsh;
+}
+
+typedef struct _BILL_HEADER
+{
+    U16 len;
+    U16 flag  ;
+}BILL_HEADER;
+
+int LoadNextNewBill(int fsh, BYTE * buff, UINT buf_size, UINT * read, U16 ftypeFilter)
+{
+    *read = 0;
+    if( fsh > 0)
+    {
+        BILL_HEADER sub;
+        UINT rd;
+        do{
+            sub.len = 0;
+            sub.flag = 0;
+            FS_Read(fsh, &sub, sizeof(BILL_HEADER), &rd); if( rd != sizeof(BILL_HEADER)) break;
+            if( (sub.flag == ftypeFilter) && ( buf_size > sub.len ))
+            {
+                memcpy(buff, &sub, sizeof(sub));
+                buff += sizeof(sub);
+                FS_Read(fsh, buff, sub.len , &rd); if( rd != sub.len ) break;
+                buff += rd;
+                FS_Read(fsh, &sub.flag, sizeof(U16), &rd); if( rd != sizeof( U16)) break;
+                if( sub.flag == ftypeFilter )
+                {
+                    *read = (sub.len)+sizeof(sub);
+                    break;
+                }
+            }
+            else
+            {
+                sub.len += sizeof(U16);
+                FS_Seek(fsh, sub.len, FS_FILE_CURRENT);
+            }
+                
+        }while( 1 );
+    }
+    return (int)buf_size;
+}
+
+
+
+
+void NewBillLookupDone(int fsh, int isErase)
+{   
+    if( fsh > 0 )
+        FS_Close(fsh);
+    if( isErase )
+    {
+        U16 path[64];
+        GetQyPathFile(path,QY_USER,L"NewBill.bin");
+        FS_Delete(path);
+    }
+}
+
+
+
+int GetBillName(BYTE * buff, int total,  WSTR *pname)
+{
+    int i=0;
+    int name_total = 0;
+    for(i=0; i<total; i++)
+    {
+        BILL_HEADER * pheader = (BILL_HEADER*)buff;
+        //guid //sender name //sender address //Sender phone //Guid // task id
+        //if( pheader->flag == QYF_RECIVE )
+        {
+            WSTR pstr = (WSTR ) (buff+sizeof(BILL_HEADER));
+            pstr += kal_wstrlen(pstr)+1;
+            *pname++ = pstr;
+            name_total ++;
+        }
+        buff += pheader->len+sizeof(BILL_HEADER);
+    }
+    return name_total ;
+}
+
+void LoadNewBillDetail(BYTE * buff, int index,int totals , WSTR * pdetail, U16 ftypeFilter)
+{
+    int i;
+    int match = -1;
+    for(i=0; i<totals ; i++)
+    {
+        BILL_HEADER * header = (BILL_HEADER*)buff;
+        if( header->flag == ftypeFilter )
+        {
+            buff += sizeof( BILL_HEADER);
+            if( ++match >= index )
+                break;
+            buff += header->len;
+        }
+        else
+        {
+            buff += header->len + sizeof( BILL_HEADER);
+        }
+    }
+    while( i<totals  )
+    {
+        WSTR pstr = (WSTR ) buff;
+        for( i=0 ; i<MAX_NEW_BILL_ITEM; i++)
+        {
+            *pdetail++ = pstr;
+            pstr += (kal_wstrlen(pstr)+1);
+        }             
+        break;
+    }
+}
+
+int DeleteNewBill(WSTR  strGUID ,U16 FlagFilt, U16 DelWays) 
+{
+    int ret = 0;
+    int fsh = OpenQyFile(QY_USER,L"NewBill.bin", FS_READ_WRITE);
+    if( fsh>0 )
+    {
+        WSTR  buff;
+        BILL_HEADER sub;
+        UINT rd;
+        UINT strbytes;
+        strbytes = (kal_wstrlen(strGUID) + 1)*2;
+        buff = (WSTR)QyMalloc(strbytes); 
+        do{
+            sub.len = 0;
+            sub.flag = 0;
+            FS_Read(fsh, &sub, sizeof(BILL_HEADER), &rd); if( rd != sizeof(BILL_HEADER)) break;
+            if( (sub.flag == FlagFilt) && (sub.len > strbytes ) )
+            {
+                UINT offsets;
+                FS_GetFilePosition(fsh, &offsets);
+                FS_Read(fsh, buff, strbytes,&rd) ;  if( rd != strbytes ) break;
+                if ( kal_wstrncmp(strGUID, buff, strbytes/2 ) == 0 )
+                {
+                    sub.flag |= DelWays;
+                    FS_Seek(fsh, offsets-2, FS_FILE_BEGIN);
+                    FS_Write(fsh, &sub.flag, sizeof(U16), &rd);
+                    FS_Seek(fsh, sub.len , FS_FILE_CURRENT );
+                    FS_Write(fsh, &sub.flag, sizeof(U16), &rd);
+                    
+                    ret = 1;
+                    break;
+                }
+                FS_Seek(fsh, offsets+ sub.len+sizeof(U16) , FS_FILE_BEGIN);
+            }
+            else
+            {
+                FS_Seek(fsh, sub.len+sizeof(U16) , FS_FILE_CURRENT);
+            }
+                
+        }while(1);
+        QyFree(buff);
+        FS_Close(fsh);
+    }
+    return ret;
+}
+
+int SendRecptCmd(WSTR * redraw_item, int (*f)(int ))
+{
+    HCMD hcmd = QyInitialComamnd(CMD_REDRAW_BILL,CMD_NORMAL_REQ,0);
+    if( hcmd )
+    {
+		QyAppendCmdItem(hcmd, redraw_item[RD_GUID]);
+		QyAppendParmItem(hcmd, redraw_item[RD_TYPE]);
+		QyAppendParmItem(hcmd, redraw_item[RD_RESON]);
+		QyAppendParmItem(hcmd, redraw_item[RD_NO]);
+        QyWrapPackage(hcmd );
+        QySendPackage(hcmd, f, 0);
+        return 1;
+    }
+    return 0;
+
+}
+
+
+int OnChkNeBillCmdAck(int ret)
+{
+    NOB_ACK  ack_info;
+    ack_info.pbuf = NULL;
+    if( ret > 0 )
+    {
+        U16 * ptr ;
+        UINT len;
+        ack_info.result = ret;
+        GetAckHandleEx( &ack_info);
+        ptr = GetFeild(ack_info.pbuf, 0,3) ;
+        if( ptr )
+        {
+            len = (U8*)ptr - (U8 *)ack_info.pbuf ;
+            len = ack_info.buflen - len;
+            if( SaveNewBill((U8 *)ptr, len) )
+                return 2;
+        }            
+    }
+    return 1;
+}
 
 void QyAsySendReadyTask(void)
 {
-    if( AsynSendTask(QYF_RECIVE) == 0 )
+    g_CmdType = 1;
+    //if( AsynSendTask(QYF_RECIVE) == 0 )
     {
         if( AsynSendTask(QYF_SIGN) == 0 )
         {
             if( AsynSendTask(QYF_PROBLEM) == 0 )
             {
-                return;
+                ChkNewBill(OnChkNeBillCmdAck);
             }
         }
     }  
+    g_CmdType = 0;
 }
 
 
@@ -1657,8 +2187,7 @@ int QyOnQueryUpdateAck(int ret)
                     kal_prompt_trace(MOD_MMI, "Upgrade resource free, %x",g_pUpgradeInfo->fsize );
                     pver = GetFeild(hack, 0, 2) ;
                     QyBeginUpdatePackage(QyOnUpdateAck,pver);
-                }
-                
+                }                
             }
         }
         else

@@ -11,7 +11,10 @@
 #define CMD_LOGIN_REQ       1
 #define CMD_LOGIN_ACK       2
 
-#define CMD_RECIVE          1002
+#define CMD_CHK_BILL        1001
+#define CMD_CHKBILL_REQ     1
+
+#define CMD_RECIVE_BILL     1007
 
 #define CMD_SIGN_RECTP      1003
 #define CMD_SRECTP_REQ      1
@@ -24,14 +27,23 @@
 #define CMD_UPDATESW        1101
 #define CMD_QUERYUPDATE_REQ 2
 
-#define MAX_RDID_LEN       14
-#define DEF_ID_MAX_BUFF    32
+#define CMD_REDRAW_BILL     1005
+#define CMD_NORMAL_REQ      1
+
+#define CMD_NOORDER_BILL    1002
+
+#define MAX_RDID_LEN        14
+#define MAX_CLIENT_ID_LEN   9
+#define DEF_ID_BUFF_SIZE    (64*sizeof(QY_RDID))
 
 #define QY_MAX_CUSTID_LEN   8
 #define QY_PSWD_MAX_LEN     8
-#define QY_USER_MAX_LEN    16
-#define QY_PHONE_MAX_LEN   16
-#define QY_IPSTRING_LEN    16
+#define QY_USER_MAX_LEN     16
+#define QY_IPSTRING_LEN     16
+#define QY_PHONE_MAX_LEN    20
+#define MAX_GUID_LEN        29
+
+#define QY_MAX_BARS         300
 
 #define MAX_PER_FILE_SIZE   (1024*1024*4)
 
@@ -44,9 +56,13 @@
 #define MAX_LIST_TASK_NUM    (300)
 
 #ifdef WIN32
-#define MUNU_TEXT   U8
+#define MENU_TEXT   U8
 #else
 #define MENU_TEXT  __align(2) U8 
+#endif
+
+#ifndef offsetof
+#define offsetof(s,m)   (size_t)&(((s *)0)->m)
 #endif
 
 #ifndef QY_MODULE
@@ -64,6 +80,16 @@
 #define  SRC_SETTING_APP      SCR_QINYI_APP_WINDOW_19
 
 #define SOC_EXT_MSG           0x10
+#define ANY_SIZE  1
+
+typedef U16 *  WSTR;
+
+typedef enum qy_list_type_em
+{
+    QY_LIST_CAPTION = -1,
+    QY_LIST_TEXT    = -2
+}QY_LIST_TYPE_EM;
+
 
 typedef enum storage_id
 {
@@ -84,6 +110,26 @@ typedef enum te_Thread_status
     QYTSK_SUSPEND  = 0x80
 }QYTHREAD_STATUS;
 
+
+typedef enum te_new_bill_item
+{
+    NB_GUID = 0,
+    NB_SEND_NAME,
+    NB_SEND_ADDR,
+    NB_SEND_PHONE,
+    NB_GUID2,
+    NB_GUID_STATE,
+    MAX_NEW_BILL_ITEM 
+}NEW_BILL_ITEM;
+
+typedef enum te_redraw_item
+{
+    RD_GUID,
+    RD_TYPE,
+    RD_RESON,
+    RD_NO,
+    MAX_REDRAW_ITEM
+}REDRAW_ITEM;
 
 
 typedef enum authen_type
@@ -125,7 +171,11 @@ typedef enum te_file_type
     QYF_FILE_MASK = 0x0F,
     
     QYF_FAILE  = 0x40, //Asychonize send faile
-    QYF_SENT  = 0x80
+    QYF_SENT   = 0x80,
+    QYF_ACCEPT = 0x100,
+    QYF_REJECT = 0x200,
+    QYF_FWORD  = 0x400,
+    QYF_CREATE = 0x800
 }QYFILE_TYPE;
 
 typedef struct _SIGN_JUNOR
@@ -139,24 +189,57 @@ typedef struct _PROBLEM_JOUNOR
     U16 strOther[100];
 }PROBLEM_JOUNOR;
 
-typedef struct _RECIVE_JUNOR
+typedef struct tagRecptNoBillProp
 {
-    U16 CustomID[QY_MAX_CUSTID_LEN];
-    U8  FeeType;
-    U32 PayedYuan;
-    U32 InsureYuna;
-    U32 FeeYuan;
-    U16 PhoneSMS[QY_PHONE_MAX_LEN];    
-}RECIVE_JUNOR;
+    BYTE Barcode[MAX_RDID_LEN+1];  /*运单号        变长,10或12个     */ 
+    BYTE payeway;      /*支付类型      定长 2个          */
+    UINT cost;         /*运费(原金额)  变长,最大13个     */  
+    UINT cash;         /*代收货款金额  变长,最大13个     */    
+    UINT insurence;    /*保价金额      变长,最大13个     */  
+    UINT water;        /*流水号        定长,3个          */  
+    BYTE sms_no[QY_PHONE_MAX_LEN];   /*短信通知号码  变长,最大20个 */    
+}BILL_PROPERTY;
+
+typedef struct tagBillInput
+{
+    int PayMethodSel;
+    U16 ClientId[MAX_CLIENT_ID_LEN+1];    
+    U16 en_water;
+    U16 barcode[MAX_RDID_LEN+1];
+    U16 bar_del[MAX_RDID_LEN+1];
+    U16 water[3 + 1];
+    U16 payway[2 + 1];
+    U16 cost[13 +1];
+    U16 cash[13+1];
+    U16 insurence[13 + 1];
+    U16 curency[13+1];
+    U16 SMS_num[QY_PHONE_MAX_LEN+1];
+}BILL_PREP_INPUT ;
+
+typedef struct tag_BillPrepTbl
+{
+    BYTE guid[MAX_GUID_LEN+1];
+    U16  type;
+    int  Total;
+    MYTIME gentime;
+    BILL_PROPERTY prep[1];
+}BILL_PREP_TBL;
+
 
 
 typedef  U8  TYPE_RDID;
 
 typedef struct _QY_RDID
 {
-    TYPE_RDID Rdid[MAX_RDID_LEN+2];
+    TYPE_RDID LaserId[MAX_RDID_LEN+2];
 }QY_RDID;
 
+typedef struct QY_STORE_INFO
+{
+    BYTE version;
+    BYTE pad;
+    U16  rdid_size;
+}STORE_INFO;
 
 typedef struct _TASK_HEADER
 {   
@@ -166,10 +249,13 @@ typedef struct _TASK_HEADER
     U16         totals;
     U16         MaxItms;
     MYTIME      GenTime;
-    MYTIME      SendTime;
+    union{
+        MYTIME  SendTime;
+        STORE_INFO info;
+    }u;
     U32         LenJunor;
     void     *  pJunor;
-    QY_RDID  *  pRdId;
+    void     *  pRdId;
 }TASK_HEADER;
 
 typedef enum te_QY_ERR
@@ -274,6 +360,23 @@ void OnUiUpdateEnd(U16 srcid, int result);
 int SendNextTask(void);
 void QueryStatuByExpId(U16 * strExpId);
 void OnUiCmdFinsh(NOB_ACK * nob_ack);
+void * GetAckHandleEx( NOB_ACK * pack_info);
 U16 * GetFeild(void * buff, int len, int idx);
+
+
+int GetBillName(BYTE * buff, int total,  WSTR *pname);
+int GetBillTotal(BYTE * buff);
+void NewBillLookupDone(int fsh, int isErase);
+int FindNexNewBill(int fsh, UINT * bill_size);
+void LoadNewBillDetail(BYTE * buff, int index,int totals , WSTR * pdetail, U16 ftypeFilter);
+int LoadNextNewBill(int fsh, BYTE * buff, UINT buf_size, UINT * read, U16 ftypeFilter);
+int FindNewBill(UINT * bill_size);
+int SaveNewBill(BYTE * pbuff, UINT len);
+int SendRecptCmd(WSTR * redraw_item, int (*f)(int ));
+int DeleteNewBill(WSTR  strGUID ,U16 FlagFilt, U16 DelWays)  ;
+
+int ChkNewBill(FuncCmdAck f);
+int OnChkNeBillCmdAck(int ret);
+S32 mmi_ucs2toCurrency(const U16 *strSrc, S32 *out_num);
 
 #endif /*_QINYI_APPTYPES_H*/

@@ -13,3 +13,34 @@ QinYiAppSrc.c (src):    kal_wstrncpy(g_RfBarCode, pstrCode, 24);
 QinYiAppSrc.c (src):    kal_wstrncpy(g_RfBarCode, pstrCode, 24);
 QinYiFnxDef.h (inc):#define kal_wstrncpy 	g_pMtk->qy_kal_wstrncpy
 QinYiprot.h (inc):    WCHAR *kal_wstrncpy(WCHAR *to, const WCHAR *from, int n);
+---- pRdId Matches (19 in 3 files) ----
+QinYiAppSrc.c (src):    mmi_asc_n_to_wcs(g_pSignRecptTask->taskname, (S8*)g_pSignRecptTask->pRdId[0].Rdid, MAX_RDID_LEN+1);////**??**//
+QinYiAppSrc.c (src):    mmi_asc_n_to_wcs(g_pProblemTask->taskname, (S8*)g_pProblemTask->pRdId[0].Rdid, MAX_RDID_LEN+1);////**??**//    
+QinYiAppTypes.h (inc):    QY_RDID  *  pRdId;
+QinYiProtocol.c (src):                    pNewTask->pRdId = pIds;
+QinYiProtocol.c (src):    QY_RDID* pIds = pNewTask->pRdId;
+QinYiProtocol.c (src):        memcpy(pIds, pNewTask->pRdId, per_size*pNewTask->totals);
+QinYiProtocol.c (src):        QyFree(pNewTask->pRdId );
+QinYiProtocol.c (src):        pNewTask->pRdId = pIds;
+QinYiProtocol.c (src):    memcpy(&ptask->pRdId[ptask->totals] , RDID.Rdid, per_size);
+QinYiProtocol.c (src):    memcpy(&ptask->pRdId[location], &ptask->pRdId[ptask->totals],per_size);
+QinYiProtocol.c (src):    memset(&ptask->pRdId[ptask->totals],  0  , per_size);
+QinYiProtocol.c (src):        FS_Write(fs_h, ptask->pRdId,  per_size*ptask->totals, &wdb);     
+QinYiProtocol.c (src):                FS_Read(fsh, ptask->pRdId, ptask->totals*per_size, &rd);
+QinYiProtocol.c (src):        if( ptask->pRdId) QyFree(ptask->pRdId);
+QinYiProtocol.c (src):        return QyPrepareSignRecptCmd(ptask->pJunor, ptask->totals, ptask->pRdId, f);
+QinYiProtocol.c (src):        return QyPrepareIssueCmd(ptask->pJunor, ptask->totals, ptask->pRdId, f);
+QinYiProtocol.c (src):                    FS_Read(fsh, g_pAsynTask->pRdId, idbuf_size, &rlen);
+---- Rdid Matches (12 in 3 files) ----
+QinYiAppSrc.c (src):    mmi_asc_n_to_wcs(g_pSignRecptTask->taskname, (S8*)g_pSignRecptTask->pRdId[0].Rdid, MAX_RDID_LEN+1);////**??**//
+QinYiAppSrc.c (src):    mmi_asc_n_to_wcs(g_pProblemTask->taskname, (S8*)g_pProblemTask->pRdId[0].Rdid, MAX_RDID_LEN+1);////**??**//    
+QinYiAppTypes.h (inc):    TYPE_RDID Rdid[MAX_RDID_LEN+2];
+QinYiProtocol.c (src):            mmi_asc_n_to_wcs(Strrdid, (S8*)pIds[i].Rdid, MAX_RDID_LEN+1);
+QinYiProtocol.c (src):            mmi_asc_n_to_wcs(Strrdid, (S8*)pIds[i].Rdid, MAX_RDID_LEN+1);
+QinYiProtocol.c (src):        if( StrnCmp((S8*)ptarid, (S8*)pIds[i].Rdid, MAX_RDID_LEN) == 0 )
+QinYiProtocol.c (src):    memset(RDID.Rdid, 0, per_size);
+QinYiProtocol.c (src):    mmi_wcs_n_to_asc((S8 *)RDID.Rdid, (U16*)pstrRdid, MAX_RDID_LEN*sizeof(U16)); //mmi_ucs2_n_to_asc
+QinYiProtocol.c (src):    if( LocationRdid(ptask, RDID.Rdid) >= 0 )
+QinYiProtocol.c (src):    memcpy(&ptask->pRdId[ptask->totals] , RDID.Rdid, per_size);
+QinYiProtocol.c (src):    mmi_wcs_n_to_asc((S8*)RDID.Rdid, (U16*)pstrRdid, MAX_RDID_LEN*sizeof(U16));
+QinYiProtocol.c (src):    location = LocationRdid(ptask, RDID.Rdid);

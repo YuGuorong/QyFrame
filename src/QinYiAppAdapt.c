@@ -208,4 +208,36 @@ U32 CalcLocal(void)
 }
 
 
+#define     GETNUM(wchar_p) (*wchar_p - L'0')
+
+S32 mmi_ucs2toCurrency(const U16 *strSrc, S32 *out_num)
+{
+    /*----------------------------------------------------------------*/
+    /* Local Variables                                                */
+    /*----------------------------------------------------------------*/
+    int offset = -1;
+    S32 val = 0; 
+    int align[] ={  100, 100, 10,  1 };
+    while( * strSrc && offset < 2 )
+    {
+        if( *strSrc == '.' && offset == -1 )
+        {
+            offset = 0;
+			strSrc++;
+            continue;
+        }
+        else if( *strSrc >'9' || *strSrc < '0')  
+        {
+            break;
+        }
+        val = val * 10 + (*strSrc - '0');
+        strSrc++;
+        if( offset >= 0 ) offset++;
+    }
+    val = val * align[offset+1];
+    if( out_num ) *out_num = val;
+
+    return 1;
+}
+
 

@@ -60,6 +60,8 @@ extern EXT_INFO * g_pext;
 #define EM_NOTIFY_DURATION             UI_POPUP_NOTIFYDURATION_TIME
 #define SetProtocolEventHandler(func, event)   \
         mmi_frm_set_protocol_event_handler(event, (PsIntFuncPtr)func, MMI_FALSE)
-
+#ifndef DeleteUptoScrID
+#define  DeleteUptoScrID(srcid )     DeleteBetweenScreen(g_waitRectSrcId, GetActiveScreenId())
+#endif
 #endif /*QY_ADAPTOR_H*/
 
