@@ -44,3 +44,4 @@ QinYiProtocol.c (src):    if( LocationRdid(ptask, RDID.Rdid) >= 0 )
 QinYiProtocol.c (src):    memcpy(&ptask->pRdId[ptask->totals] , RDID.Rdid, per_size);
 QinYiProtocol.c (src):    mmi_wcs_n_to_asc((S8*)RDID.Rdid, (U16*)pstrRdid, MAX_RDID_LEN*sizeof(U16));
 QinYiProtocol.c (src):    location = LocationRdid(ptask, RDID.Rdid);
+---- g_wgui_cat033_shortcut Matches (0 in 0 files) ----

@@ -33,14 +33,26 @@ UINT WriteBillJunor(int fsh );
 
 
 int g_CmdType;
+MYTIME * g_pTaskGenTime;
+void SetTaskTime(MYTIME * time)
+{
+    g_pTaskGenTime = time;    
+}
 
+void ClearTaskTimeSet(void)
+{
+    g_pTaskGenTime = NULL;
+}
 
 int QyAppendTime(LPNOB  pNob)
 {
     if( pNob )
     {
         MYTIME syst;
-        GetDateTime(&syst);
+        if( g_pTaskGenTime == NULL )
+            GetDateTime(&syst);
+        else
+            syst = *g_pTaskGenTime;
         kal_wsprintf((U16 *)pNob->pCmdCurPtr, "`%d%02d%02d%02d%02d%02d", syst.nYear, syst.nMonth, syst.nDay, syst.nHour, syst.nMin, syst.nSec); 
         pNob->pCmdCurPtr += 15;
         return 14;
@@ -869,7 +881,6 @@ TASK_HEADER * CreateTask(QYFILE_TYPE ftype, int id_buff_size)
             }
             if( valid )
             {
-                GetDateTime(&pNewTask->GenTime);
                 pNewTask->MaxItms = id_buff_size/per_size;
                 pNewTask->totals = 0;
                 pNewTask->LenJunor = jun_size[ftype] ;
@@ -1070,7 +1081,8 @@ int  SaveTask(TASK_HEADER * ptask)
     {  
         U32 wdb = 0;
         UINT fsStartPos = FS_Seek(fs_h, 0, FS_FILE_END);
-        
+        GetDateTime(&ptask->GenTime);
+                
         per_size = GetPerIdSize(ptask->filetype);
         ptask->tsksize = sizeof(TASK_HEADER)+ptask->LenJunor+per_size*ptask->totals-8;
 
@@ -1248,7 +1260,7 @@ int SendReciveBill(BILL_PREP_TBL * bphdr, BILL_PROPERTY * pids, FuncCmdAck f)
         QyAppendParmItem(hcmd,g_newBillDetal[NB_SEND_NAME]); //SENDER NAME
         QyAppendParmItem(hcmd,g_newBillDetal[NB_GUID]); //GUID
 
-        for( i=0; i<bphdr->Total; i++)
+        for( i=0; i<bphdr->Total; pids++,i++)
         {
             mmi_asc_n_to_wcs(tmp, (S8*)pids->Barcode, MAX_GUID_LEN );
             QyAppendParmItem(hcmd, tmp);  //Bill Num
@@ -1312,7 +1324,7 @@ int SendNoOrderBill(BILL_PREP_TBL * bphdr, BILL_PROPERTY * pids, FuncCmdAck f)
         kal_wsprintf(tmp, "01");
         QyAppendParmItem(hcmd, tmp);
 
-        for( i=0; i<bphdr->Total; i++)
+        for( i=0; i<bphdr->Total; pids++,i++)
         {
             mmi_asc_n_to_wcs(tmp, (S8*)pids->Barcode, MAX_GUID_LEN );
             QyAppendParmItem(hcmd, tmp);
@@ -1373,6 +1385,7 @@ int QyPrepareBillCmd(BILL_PREP_TBL * pBillHeader, BILL_PROPERTY * pIds, FuncCmdA
 int  SendTask(TASK_HEADER * ptask, int bpromopt, FuncCmdAck f)
 {
     if( ptask == NULL ) return ERR_INVLD_PARMA;
+    SetTaskTime(&ptask->GenTime);
     switch( ptask->filetype )
     {
     case QYF_SIGN:
@@ -1385,6 +1398,7 @@ int  SendTask(TASK_HEADER * ptask, int bpromopt, FuncCmdAck f)
         break;
     }
     ClearAsynNob();
+    ClearTaskTimeSet();
     return 0;
 } 
 
@@ -1559,6 +1573,8 @@ int AsynSendTask(QYFILE_TYPE ftype)
                     if( g_pAsynTask  == NULL ) return 0;
                     idbuf_size = node.tsksize - g_pAsynTask->LenJunor - sizeof(TASK_HEADER)+4;
                     FS_Read(fsh, g_pAsynTask->taskname,sizeof(TASK_HEADER)-6-8, &rlen );
+					if( g_pAsynTask->pJunor == NULL ) 
+						g_pAsynTask->pJunor = QyMalloc(g_pAsynTask->LenJunor+1);
                     FS_Read(fsh, g_pAsynTask->pJunor,g_pAsynTask->LenJunor, &rlen );
                     FS_Read(fsh, g_pAsynTask->pRdId, idbuf_size, &rlen);
                     FS_Close(fsh);
@@ -1615,6 +1631,12 @@ void ResetAsyCheckTimer(void)
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
+typedef struct _BILL_HEADER
+{
+    U16 len;
+    U16 flag  ;
+}BILL_HEADER;
+
 int GetBillTotal(BYTE * buff)
 {
     S32 total = 0;
@@ -1660,22 +1682,61 @@ int SaveNewBill(BYTE * pbuff, UINT len)
     return 0;
 }
 
-int FindNewBill(UINT * bill_size)
+int FindNewBill( UINT * bill_size, UINT * all_size, U16 ftypeFilter )
 {
-    int fsh = OpenQyFile(QY_USER,L"NewBill.bin", FS_READ_ONLY);
+    UINT undel_data = 0;
+    UINT find_data = 0;
+    int fsh = OpenQyFile(QY_USER,L"NewBill.bin", FS_READ_WRITE);
     if( fsh>0 )
     {
-        FS_GetFileSize(fsh, bill_size); 
+        BILL_HEADER sub;
+        UINT rd;
+        do{
+            UINT offset ;
+            FS_GetFilePosition(fsh, &offset);
+            sub.len = 0;
+            sub.flag = 0;
+            FS_Read(fsh, &sub, sizeof(BILL_HEADER), &rd); if( rd != sizeof(BILL_HEADER)) break;
+            if( (sub.flag & QYF_SENT) == 0 )
+            {
+                U16 flag = sub.flag;
+                FS_Seek(fsh, sub.len, FS_FILE_CURRENT);
+                FS_Read(fsh, &sub.flag, sizeof(U16), &rd); 
+                if( rd == sizeof(U16) && sub.flag == flag )
+                {
+                   if( flag == ftypeFilter )
+                    {
+                        find_data += sub.len+4;
+                    }
+                    undel_data += sub.len;
+                }
+                else
+                {
+                    UINT flen ;
+                    sub.flag |= QYF_FAILE;
+                    FS_Seek(fsh, 0, FS_FILE_END);
+                    FS_GetFilePosition(fsh, &flen);
+                    FS_Write(fsh, &sub.flag, sizeof(U16),&rd);
+                    FS_Seek(fsh, offset, FS_FILE_BEGIN );
+                    sub.len =   flen - offset - sizeof(sub);
+                    FS_Write(fsh, &sub, sizeof(sub), &rd);
+                    break;                   
+                }
+            }
+            else
+            {
+                sub.len += sizeof(U16);
+                FS_Seek(fsh, sub.len, FS_FILE_CURRENT);
+            }
+        }while( 1 );
+        if( bill_size ) *bill_size = find_data;        
+        if( all_size ) * all_size = undel_data;
+        
         FS_Seek(fsh, 0 ,FS_FILE_BEGIN);
     }
+    
     return fsh;
 }
-
-typedef struct _BILL_HEADER
-{
-    U16 len;
-    U16 flag  ;
-}BILL_HEADER;
 
 int LoadNextNewBill(int fsh, BYTE * buff, UINT buf_size, UINT * read, U16 ftypeFilter)
 {
@@ -1688,7 +1749,7 @@ int LoadNextNewBill(int fsh, BYTE * buff, UINT buf_size, UINT * read, U16 ftypeF
             sub.len = 0;
             sub.flag = 0;
             FS_Read(fsh, &sub, sizeof(BILL_HEADER), &rd); if( rd != sizeof(BILL_HEADER)) break;
-            if( (sub.flag == ftypeFilter) && ( buf_size > sub.len ))
+            if( (sub.flag == ftypeFilter) && ( buf_size >= sub.len ))
             {
                 memcpy(buff, &sub, sizeof(sub));
                 buff += sizeof(sub);
@@ -1869,7 +1930,7 @@ int OnChkNeBillCmdAck(int ret)
 void QyAsySendReadyTask(void)
 {
     g_CmdType = 1;
-    //if( AsynSendTask(QYF_RECIVE) == 0 )
+    if( AsynSendTask(QYF_RECIVE) == 0 )
     {
         if( AsynSendTask(QYF_SIGN) == 0 )
         {

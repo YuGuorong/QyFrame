@@ -44,6 +44,8 @@
 #define MAX_GUID_LEN        29
 
 #define QY_MAX_BARS         300
+#define TEXT_MAX_LEN        100 
+#define LEN_OTH_PROBLEM_TXT TEXT_MAX_LEN
 
 #define MAX_PER_FILE_SIZE   (1024*1024*4)
 
@@ -370,7 +372,7 @@ void NewBillLookupDone(int fsh, int isErase);
 int FindNexNewBill(int fsh, UINT * bill_size);
 void LoadNewBillDetail(BYTE * buff, int index,int totals , WSTR * pdetail, U16 ftypeFilter);
 int LoadNextNewBill(int fsh, BYTE * buff, UINT buf_size, UINT * read, U16 ftypeFilter);
-int FindNewBill(UINT * bill_size);
+int FindNewBill( UINT * bill_size, UINT * all_size, U16 ftypeFilter );
 int SaveNewBill(BYTE * pbuff, UINT len);
 int SendRecptCmd(WSTR * redraw_item, int (*f)(int ));
 int DeleteNewBill(WSTR  strGUID ,U16 FlagFilt, U16 DelWays)  ;

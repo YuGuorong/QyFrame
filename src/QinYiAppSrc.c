@@ -962,10 +962,7 @@ void EntryQinYiSignRecptEx(void)
 
 void EntryQinYiSignRecpt(void) 
 {
-    char * ptr = QyMalloc( 100);
-    kal_prompt_trace(MOD_MMI, "FuncQyCheckHeap %x", ptr);
     FuncQyCheckHeap();
-    QyFree(ptr);
     
     memset(g_RfBarCode,  0, sizeof(U16)*(MAX_RDID_LEN+2)  );
     memset(g_SignRecptName,0, QY_USER_MAX_LEN*2 );
@@ -1024,9 +1021,10 @@ void ShowQueueTaskEntry(void)
 // Show detail of diffent task
 #ifdef TASK_DETAIL_MODULE
 
-U16 * g_pTaskTotal = NULL;
-U16 * g_pWaterNum = NULL;
-U16 * g_pTaskTime = NULL;
+WSTR  g_pTaskTotal = NULL;
+WSTR  g_pWaterNum  = NULL;
+WSTR  g_pTaskTime  = NULL;
+WSTR  g_pWaitTitle = NULL;
 TASK_HEADER * g_pDeailTask = NULL ;
 extern const int g_cmdReqAck[];
 extern WSTR g_newBillDetal[MAX_NEW_BILL_ITEM];
@@ -1048,8 +1046,8 @@ int TaskSendDone(int ret)
                 DeleleTask(g_DumpType, g_OptSel4Resend);
                 if( g_SendTaskMode == 0 ||  SendNextTask() == 0)
                 {
-                    DeleteBetweenScreen(g_SrcIdBeforeList, GetCurrScrnId());
-                    //GoBackToHistory(g_SrcIdBeforeList);
+                    //DeleteBetweenScreen(g_SrcIdBeforeList, GetCurrScrnId());
+                    GoBackToHistory(g_SrcIdBeforeList);
                     g_DumpType = QYF_RECIVE;
                     ShowQueueTaskEntry();
                     
@@ -1092,6 +1090,7 @@ void OnConfirmSendTask(void)
             
     }
 }
+#define RELEASE_HANDLE(h)  if(h){QyFree(h), h = NULL;}
     
 U8 ExitTaskDetalListWindow(void * p)
 {
@@ -1100,20 +1099,11 @@ U8 ExitTaskDetalListWindow(void * p)
         FreeTask(g_pDeailTask); g_pDeailTask = NULL;
     }
 
-    if( g_pTaskTotal)
-    {
-        QyFree(g_pTaskTotal); g_pTaskTotal = NULL;
-    }
-
-    if( g_pWaterNum )
-    {
-        QyFree(g_pWaterNum);g_pWaterNum = NULL;
-    }
+    RELEASE_HANDLE( g_pTaskTotal);
+    RELEASE_HANDLE( g_pWaterNum );    
+    RELEASE_HANDLE( g_pTaskTime );
+    RELEASE_HANDLE( g_pWaitTitle );
     
-    if( g_pTaskTime)
-    {
-        QyFree(g_pTaskTime); g_pTaskTime = NULL;
-    }
 	return 0;
 }
 
@@ -1121,11 +1111,14 @@ int FillReciveJunorItem(int idx)
 {
     WSTR pDetail;
     BILL_PREP_TBL * pJunor;
-    BILL_PROPERTY * pPrep;
+    BILL_PROPERTY * pPrep; 
     pJunor = (BILL_PREP_TBL*)g_pDeailTask->pJunor; 
     pPrep  = (BILL_PROPERTY *)g_pDeailTask->pRdId;
 
     pDetail = (WSTR)pJunor->prep;
+    mmi_asc_n_to_wcs(g_RfBarCode,(S8*)pPrep->Barcode, MAX_RDID_LEN+1);
+    g_RfBarCode[MAX_RDID_LEN] = 0;
+    
     if( pJunor->type == (QYF_RECIVE | QYF_ACCEPT) )
     {
         int i;
@@ -1135,7 +1128,9 @@ int FillReciveJunorItem(int idx)
             g_newBillDetal[i] = pDetail;
             pDetail += kal_wstrlen(pDetail)+1;
         }
+        kal_wstrncpy(g_pWaitTitle,g_newBillDetal[NB_SEND_NAME], 16);
         ADD_TEXT_ITEM( g_pTaskTotal );
+        ADD_TEXT_ITEM( g_RfBarCode );
         ADD_TEXT_ITEM( g_newBillDetal[NB_SEND_NAME] );
         ADD_TEXT_ITEM( g_newBillDetal[NB_SEND_ADDR] );
         ADD_TEXT_ITEM( g_newBillDetal[NB_SEND_PHONE] );
@@ -1151,12 +1146,17 @@ int FillReciveJunorItem(int idx)
     }
     else if( pJunor->type == (QYF_RECIVE | QYF_CREATE) )
     {
-        kal_wsprintf(g_pTaskTotal, "%w(%d)",((U16*)"\xE0\x65\xA2\x8B\x55\x53\xD0\x8F\x55\x53\x0\x0") /*L"无订单运单"*/, pJunor->Total);
+        kal_wstrncpy(g_pWaitTitle,((U16*)"\xE0\x65\xA2\x8B\x55\x53\xD0\x8F\x55\x53\x0\x0") /*L"无订单运单"*/, 16);
+
+        kal_wsprintf(g_pTaskTotal, "%w(%d)",((U16*)"\xD0\x8F\x55\x53\x0\x0") /*L"运单"*/, pJunor->Total);
         ADD_TEXT_ITEM( g_pTaskTotal);
+        ADD_TEXT_ITEM( g_RfBarCode );
         ADD_CAPTION_ITEM( ((U16*)"\xA2\x5B\x37\x62\x16\x7F\xF7\x53\x0\x0") /*L"客户编号"*/);
         ADD_TEXT_ITEM( g_pDeailTask->taskname );
-    }
         
+    }
+
+    
     kal_wsprintf(g_pTaskTime,"%d.%02d/%02d-%02d:%02d:%02d",
         g_pDeailTask->GenTime.nYear, g_pDeailTask->GenTime.nMonth, g_pDeailTask->GenTime.nDay,
         g_pDeailTask->GenTime.nHour, g_pDeailTask->GenTime.nMin,  g_pDeailTask->GenTime.nSec);
@@ -1169,6 +1169,7 @@ int FillSignJunorItem(int idx)
 {
     SIGN_JUNOR * pJunor;
     
+    kal_wstrncpy(g_pWaitTitle,((U16*)"\x7E\x7B\x36\x65\x0\x0") /*L"签收"*/, 16);
 
     pJunor = (SIGN_JUNOR*)g_pDeailTask->pJunor; 
     kal_wsprintf(g_pTaskTotal, "%w(%d)",((U16*)"\xD0\x8F\x55\x53\x70\x65\x0\x0") /*L"运单数"*/, g_pDeailTask->totals);
@@ -1194,6 +1195,7 @@ int FillProblemJunorItem(int idx)
     S32 ProblemIndex = 0;
     U16 * pProblemText ;
     PROBLEM_JOUNOR * pJunor= (PROBLEM_JOUNOR*)g_pDeailTask->pJunor; 
+    kal_wstrncpy(g_pWaitTitle,((U16*)"\xEE\x95\x98\x98\xF6\x4E\x0\x0") /*L"问题件"*/, 16);
     
     ADD_CAPTION_ITEM(  ((U16*)"\xEE\x95\x98\x98\xF6\x4E\x7B\x7C\x8B\x57\x0\x0") /*L"问题件类型"*/);
     //ADD_TEXT_ITEM( pJunor->ProblemID );
@@ -1282,7 +1284,7 @@ void ShowTaskDetal(void)
     DisableCategory57ScreenDone();
 
     ShowCategory57Screen_ex(
-        (U8*) ((U16*)"\x49\x7B\x85\x5F\xD1\x53\x1\x90\x0\x0") /*L"等待发送"*/,
+        (U8*) g_pWaitTitle,
         0,
         QY_RES(STR_GLOBAL_OK),
         QY_RES(IMG_GLOBAL_OK),
@@ -1323,9 +1325,10 @@ int SendNextTask(void)
 void ShowTaskEntry( int bNotShowDetail)
 {
     ExitTaskDetalListWindow(NULL);
-    g_pDeailTask = LoadTask(g_DumpType, g_OptSel4Resend);
-    g_pTaskTotal = QyMalloc(sizeof(U16)*16);
-	g_pTaskTime = QyMalloc(24*2);
+    g_pDeailTask  = LoadTask(g_DumpType, g_OptSel4Resend);
+    g_pTaskTotal  = QyMalloc(sizeof(U16)*16);
+	g_pTaskTime   = QyMalloc(24*2);
+    g_pWaitTitle  = QyMalloc(32);
     
     if (g_pDeailTask == NULL)
     {
@@ -1362,7 +1365,8 @@ void SendProblemTask(void)
     
     kal_wstrcpy(prob_jounor.ProblemID,g_SignRecptName);
     kal_wstrcpy(prob_jounor.strOther, g_pOtherProblem);
-    SetTaskJunor(g_pProblemTask, &prob_jounor, sizeof(16)*4 + kal_wstrlen(prob_jounor.strOther));
+    SetTaskJunor(g_pProblemTask, &prob_jounor, 
+        offsetof(PROBLEM_JOUNOR,strOther) + (kal_wstrlen(prob_jounor.strOther)*2 + 2));
     mmi_asc_n_to_wcs(g_pProblemTask->taskname, (S8*)prdid[0].LaserId, MAX_RDID_LEN+1);////**??**//    
     if( SaveTask(g_pProblemTask) >= 0  )
     {
@@ -1550,7 +1554,7 @@ void QyPeoblemListEntry(void)
         ADD_TEXT_ITEM(pProblemText);
     }
     ADD_CAPTION_ITEM( (((U16*)"\xEE\x95\x98\x98\xF6\x4E\x9F\x53\xE0\x56\x0\x0") /*L"问题件原因"*/));
-    ADD_EDIT_ITEM(g_pOtherProblem,100,IMM_INPUT_TYPE_SENTENCE);    
+    ADD_EDIT_ITEM(g_pOtherProblem,LEN_OTH_PROBLEM_TXT,IMM_INPUT_TYPE_SENTENCE);    
      
     if (inputBuffer != NULL)
     {
@@ -1584,9 +1588,9 @@ void QyEntryProblemApp(void)
     memset(g_RfBarCode,  0, sizeof(U16)*(MAX_RDID_LEN+2)  );
     memset(g_SignRecptName,0, sizeof(U16)*QY_USER_MAX_LEN);
     ExitQinYnProblem(NULL);
-    g_pOtherProblem = QyMalloc(100*2);
+    g_pOtherProblem = QyMalloc(LEN_OTH_PROBLEM_TXT*2);
     if( g_pOtherProblem  == NULL ) return;
-    memset(g_pOtherProblem,0 ,100*2);
+    memset(g_pOtherProblem,0 ,LEN_OTH_PROBLEM_TXT*2);
     g_pProblemTask = CreateTask(QYF_PROBLEM, 0);
     QyPeoblemListEntry();
 }
@@ -1750,9 +1754,9 @@ void QueryByExpid(void)
 
 MENU_TEXT g_strPayMethodTbl[]=
 {
-    "\x30\x52\xD8\x4E\x0\x0" /*L"到付"*/
     "\xB0\x73\xD8\x4E\x0\x0" /*L"现付"*/
     "\x8\x67\xD3\x7E\x0\x0"  /*L"月结"*/
+    "\x30\x52\xD8\x4E\x0\x0" /*L"到付"*/
 };
 #define STR_PAY_METHOD_MAX 3
 U8 * g_strPayMethod[STR_PAY_METHOD_MAX];
@@ -1795,9 +1799,9 @@ int WaitRecepAck(int ret)
             U16 del_ways[] = {QYF_ACCEPT,QYF_REJECT,QYF_FWORD};
             DeleteNewBill(g_newBillDetal[NB_GUID],QYF_RECIVE ,del_ways[g_wait_sel]); // ?? not finish yet ?? //
             imgid = QY_RES(IMG_GLOBAL_SUCCESS);
-            DeleteBetweenScreen(g_waitRectSrcId, GetCurrScrnId());
+            GoBackToHistory(g_waitRectSrcId);
             //DeleteUptoScrID(g_waitRectSrcId);
-            //QyRecptApp(g_NewBillType);
+            QyRecptApp(g_NewBillType);
             kal_wsprintf( caption, "%w%w!",g_strWaitReply[g_wait_sel],((U16*)"\x10\x62\x9F\x52\x0\x0") /*L"成功"*/ );
         }
         else
@@ -1834,7 +1838,7 @@ int  FillWaitRecpt(int *pdef)
     if( g_wait_sel == 1 )
     {
         AddListItem(idx++, ((U16*)"\xA4\x64\x0\x95\x9F\x53\xE0\x56\x0\x0") /*L"撤销原因"*/,0 ,QY_LIST_CAPTION);
-        AddListItem(idx++, g_RebackReson, 100 , IMM_INPUT_TYPE_SENTENCE);
+        AddListItem(idx++, g_RebackReson, TEXT_MAX_LEN , IMM_INPUT_TYPE_SENTENCE);
         AddListItem(idx++,  ((U16*)"\xD1\x53\x1\x90\x0\x0") /*L"发送"*/,0 ,QY_LIST_TEXT);
     }
     else if( g_wait_sel == 2 )
@@ -1905,7 +1909,7 @@ void WaitRecptEntry(void)
     if( g_wait_sel )
     {
         memset(g_SignRecptName, 0 ,sizeof(U16)*( QY_USER_MAX_LEN+1));
-        g_RebackReson =(WSTR) QyMalloc(100*sizeof(U16));
+        g_RebackReson =(WSTR) QyMalloc(TEXT_MAX_LEN*sizeof(U16));
         ShowQinYiList(((U8*)"\xE0\x65\xA2\x8B\x55\x53\x36\x65\xF6\x4E\x0\x0") /*L"无订单收件"*/,
             FillWaitRecpt,WaitRecptHlt,WaitRecptOnOk, WaitRecptOnExit, NULL);
         ChangeLeftSoftkey(QY_RES(STR_GLOBAL_OK), QY_RES(IMG_GLOBAL_OK));
@@ -1980,7 +1984,7 @@ UINT CalNewBillLen(WSTR * bill_deatil)
     int i;
     if( g_BillPrepTbl->type ==  (QYF_RECIVE|QYF_ACCEPT) )
     {
-        for( i=0 ;i<NBD_MAX_KEY_ITEM;i++)
+        for( i=0 ;i<MAX_NEW_BILL_ITEM;i++)
         {
             len += kal_wstrlen(bill_deatil[i])+1;
         }
@@ -1998,12 +2002,12 @@ UINT WriteBillJunor(int fsh )
 
     if( g_BillPrepTbl->type ==  (QYF_RECIVE|QYF_ACCEPT) )
     {
-        for( i=0 ;i<NBD_MAX_KEY_ITEM;i++)
+        for( i=0 ;i<MAX_NEW_BILL_ITEM;i++)
         {
             len = kal_wstrlen(g_newBillDetal[i])+1;
             FS_Write(fsh, g_newBillDetal[i], len*2,&wt);
             wten += wt;
-        }
+        } 
     }
     return wten;   
 }
@@ -2018,14 +2022,18 @@ void SaveBill(BILL_PREP_TBL* bill_tbl,WSTR *bill_deatil)
     ptask->totals = g_BillPrepTbl->Total;
     ptask->MaxItms = ptask->totals;
     ptask->u.info.rdid_size = sizeof(BILL_PROPERTY);
-    mmi_asc_n_to_wcs(ptask->taskname,(S8*)g_BillPrepTbl->guid, MAX_RDID_LEN);
+    if( g_NewBillType == (QYF_RECIVE | QYF_ACCEPT ) )
+        kal_wstrncpy(ptask->taskname,g_newBillDetal[NB_SEND_NAME], MAX_RDID_LEN);
+    else
+        kal_wstrncpy(ptask->taskname, ((U16*)"\xE0\x65\xA2\x8B\x55\x53\x36\x65\xF6\x4E\x0\x0") /*L"无订单收件"*/, MAX_RDID_LEN);
     ptask->taskname[MAX_RDID_LEN] = 0;
 
     ret = SaveTask(ptask) ;
     if( ret == QY_SUCCESS )
     {
-        DeleteNewBill(g_newBillDetal[NB_GUID],QYF_RECIVE ,QYF_SENT);
-        DeleteBetweenScreen(g_waitRectSrcId, GetCurrScrnId());
+        if( g_NewBillType == (QYF_RECIVE | QYF_ACCEPT ) )
+            DeleteNewBill(g_newBillDetal[NB_GUID],g_NewBillType ,QYF_SENT);
+        GoBackToHistory(g_waitRectSrcId);
         QyRecptApp(g_NewBillType);
         DisplayPopup( (U8 *)((U16*)"\xDD\x4F\x58\x5B\x10\x62\x9F\x52\x0\x0") /*L"保存成功"*/,
             QY_RES(IMG_GLOBAL_SUCCESS), 0, UI_POPUP_NOTIFYDURATION_TIME, 0);
@@ -2041,7 +2049,7 @@ void OnBillConfrimSend(int result)
     {
         g_BillPrepTbl->type = g_NewBillType;
         GetDateTime(&g_BillPrepTbl->gentime);        
-        mmi_wcs_n_to_asc((S8*)g_BillPrepTbl->guid,g_BillPrepInput->ClientId,MAX_CLIENT_ID_LEN*2);
+        //mmi_wcs_n_to_asc((S8*)g_BillPrepTbl->guid,g_BillPrepInput->ClientId,MAX_CLIENT_ID_LEN*2);
         g_BillPrepTbl->guid[MAX_GUID_LEN] = 0;
         
         SaveBill(g_BillPrepTbl,g_newBillDetal);        
@@ -2068,7 +2076,7 @@ int CheckCurrency(U16 * pstr)
 
 int CheckNewBillInput(WSTR * title)
 {
-    if( g_BillPrepInput->ClientId[0] == 0 ) 
+    if(0)// g_BillPrepInput->ClientId[0] == 0 ) 
     {
         if( title ) *title = ((U16*)"\xF7\x8B\x93\x8F\x65\x51\xA2\x5B\x37\x62\x16\x7F\xF7\x53\x0\x0") /*L"请输入客户编号"*/;
         return NBD_CLIENT_ID;
@@ -2140,10 +2148,12 @@ int NewBillDetailOnOk(int sel)
     }
     else if(g_hltNewBillDetail == g_NBHltKeyItems[NBD_BAR_ADD])
     {
+        wgui_update_inline_data();
         OnNewBillAddBar(g_BillPrepInput->barcode);
     }
     else if(g_hltNewBillDetail == g_NBHltKeyItems[NBD_BAR_DEL])
     {
+        wgui_update_inline_data();
         OnNewBillDelBar(g_BillPrepInput->barcode);
     }
     return sel;
@@ -2207,7 +2217,7 @@ void AddPrepInfo(BILL_PROPERTY * bill_prep)
 
 void OnNewBillAddBar(U16 * pstrCode)
 { 
-    int toneid = ERROR_TONE;
+    int toneid =  BATTERY_WARNING_TONE ;
     if( g_BillPrepTbl->Total < QY_MAX_BARS )
     {
         WSTR title;
@@ -2224,7 +2234,7 @@ void OnNewBillAddBar(U16 * pstrCode)
                 g_BillPrepInput->bar_del[0] = 0;
                 kal_wsprintf(g_SignRecptCpat,"%w:%d/%d",((U16*)"\x6B\x62\xCF\x63\x0\x0") /*L"扫描"*/, g_BillPrepTbl->Total, QY_MAX_BARS);                
                 RedrawCategory57Screen();
-                toneid = BATTERY_WARNING_TONE ;
+                toneid = ERROR_TONE;;
             }
         }
         else
@@ -2242,7 +2252,7 @@ void OnNewBillAddBar(U16 * pstrCode)
 
 void OnNewBillDelBar(U16 * pstrCode)
 {
-    int toneid = ERROR_TONE;
+    int toneid = BATTERY_WARNING_TONE;
     if( g_BillPrepTbl->Total <= 0 )
     {
         DisplayPopup((U8*)((U16*)"\xA1\x6C\x9\x67\x6B\x62\xCF\x63\x61\x67\x1\x78\x21\x0\x0\x0") /*L"没有扫描条码!"*/,
@@ -2267,7 +2277,7 @@ void OnNewBillDelBar(U16 * pstrCode)
                 
             DisplayPopup((U8*)((U16*)"\x20\x52\x64\x96\x61\x67\x1\x78\x10\x62\x9F\x52\x21\x0\x0\x0") /*L"删除条码成功!"*/,
                     QY_RES(IMG_GLOBAL_WARNING), 0, UI_POPUP_NOTIFYDURATION_TIME, 0);
-            toneid = BATTERY_WARNING_TONE ;
+            toneid = ERROR_TONE ;
         }
     }
     playRequestedTone(toneid);
@@ -2322,8 +2332,6 @@ int  FillRecptNoBill(int idx)
         memset(g_BillPrepInput,0, sizeof(BILL_PREP_INPUT));
     }
 
-    AddListItem(idx++,((U16*)"\xA2\x5B\x37\x62\x16\x7F\xF7\x53\x0\x0") /*L"客户编号"*/,0 ,QY_LIST_CAPTION);
-    AddListItem(idx++,g_BillPrepInput->ClientId , MAX_CLIENT_ID_LEN ,IMM_INPUT_TYPE_NUMERIC);
     return idx;
 }
 
@@ -2337,7 +2345,7 @@ int FillBillProperty(int idx, int bWater )
     AddListItem(idx++,((U16*)"\xA2\x5B\x37\x62\x16\x7F\xF7\x53\x0\x0") /*L"客户编号"*/,0 ,QY_LIST_CAPTION);
     AddListItem(idx++, g_BillPrepInput->ClientId , MAX_CLIENT_ID_LEN ,IMM_INPUT_TYPE_NUMERIC);
 
-    g_BillPrepInput->PayMethodSel = 1;
+    g_BillPrepInput->PayMethodSel = 0;
     AddListItem(idx++, ((U16*)"\x2F\x65\xD8\x4E\x7B\x7C\x8B\x57\x20\x0\x0\x0") /*L"支付类型 "*/, 0, QY_LIST_CAPTION );
     AddListSelItem(idx++,g_strPayMethod,STR_PAY_METHOD_MAX,&g_BillPrepInput->PayMethodSel,QyDumyFuncInt );
     
@@ -2485,15 +2493,15 @@ void QyRecptAppExit(void)
 
 void LoadAllNewBill(U16 ftype )
 {
-    UINT bill_size;
+    UINT bill_size, all_size;
     U16 * pbill, * ptr;
-    int fsh = FindNewBill(&bill_size);
+    int fsh = FindNewBill(&bill_size, &all_size, ftype);
     int bill_total = 0;
     if( fsh > 0)
     {
         UINT rd;
         UINT load_size = 0;
-        int bErase = 0;
+        int bErase =( all_size == 0 ) ? 1 :  0;
         pbill = (U16 *)QyMalloc(bill_size);
         ptr = pbill;
         do
@@ -2519,9 +2527,9 @@ void LoadAllNewBill(U16 ftype )
         {
             FS_GetFileSize(fsh, &bill_size);
             QyFree(pbill);
-            if( bill_size ) bErase = 1;
         }
             
+        if( all_size == 0 ) bErase = 1;
         NewBillLookupDone(fsh, bErase);
     }
 }
@@ -2814,20 +2822,18 @@ int OnUiChkNeBillCmdAck(int ret)
 
 int OnQinYiReceptMenuSel(S32 sel)
 {    
+    g_waitRectSrcId = GetActiveScreenId();
     switch(sel)
     {
     case 0:
         QyRecptApp(QYF_RECIVE);
-        g_waitRectSrcId = GetActiveScreenId();
         break;
     case 1:
         QyRecptApp(QYF_RECIVE|QYF_ACCEPT);
-        g_waitRectSrcId = GetActiveScreenId();
         break;
     case 2:
         g_NewBillType = QYF_RECIVE|QYF_CREATE;
         NewBillDetailApp();
-        g_waitRectSrcId = GetActiveScreenId();
         break;
     case 3:
         ChkNewBill(OnUiChkNeBillCmdAck);  
