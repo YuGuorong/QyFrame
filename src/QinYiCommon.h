@@ -6,7 +6,7 @@
 #include "fs_errcode.h"
 #include "fs_type.h"
 #include "soc_sap.h"
-#define QY_APPLICATION_VERSION    24
+#define QY_APPLICATION_VERSION    25
 
 __global_reg(6) int QY_R9;
 

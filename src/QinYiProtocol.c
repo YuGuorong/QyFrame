@@ -1052,25 +1052,7 @@ static int FindQyTaskFile(QYFILE_TYPE ftype,  int bsave)
 
 }
 
-int WriteJunor(int fsh, TASK_HEADER * ptask)
-{
-    UINT wt = 0;
-    switch(ptask->filetype )
-    {
-    case QYF_RECIVE:
-        wt = WriteBillJunor(fsh);
-        break;
-    case QYF_SIGN:
-    case QYF_PROBLEM:
-         FS_Write(fsh, ptask->pJunor,  ptask->LenJunor, &wt);
-        break;
-    default:
-        break;
-    }
-    return wt;
-}
-
-int  SaveTask(TASK_HEADER * ptask)
+int  SaveTask(TASK_HEADER * ptask, FuncWriteJunor fwr_junor)
 {
     int per_size = 0;
     int ret = ERR_FILE_NOT_OPEN;
@@ -1090,7 +1072,10 @@ int  SaveTask(TASK_HEADER * ptask)
         FS_Write(fs_h, ptask, sizeof(TASK_HEADER)-8, &wdb);    // sub 8 means not store pointers
         if( wdb != sizeof(TASK_HEADER)-8 ) goto endf;
 
-        wdb = WriteJunor(fs_h, ptask );        
+        if( fwr_junor )
+            wdb = fwr_junor(fs_h, ptask );    
+        else
+            FS_Write(fs_h, ptask->pJunor,  ptask->LenJunor, &wdb);
         if( wdb != ptask->LenJunor ) goto endf;
 
         FS_Write(fs_h, ptask->pRdId,  per_size*ptask->totals, &wdb);     

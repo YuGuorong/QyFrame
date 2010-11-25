@@ -119,9 +119,9 @@ Memory Map of the image
 
   Image Entry point : 0x00000000
 
-  Load Region LR_1 (Base: 0x00000000, Size: 0x0000db34, Max: 0xffffffff, PI)
+  Load Region LR_1 (Base: 0x00000000, Size: 0x0000dae0, Max: 0xffffffff, PI)
 
-    Execution Region ER_RO (Base: 0x00000000, Size: 0x0000d6c0, Max: 0xffffffff, PI)
+    Execution Region ER_RO (Base: 0x00000000, Size: 0x0000d66c, Max: 0xffffffff, PI)
 
     Base Addr    Size         Type   Attr  Idx  E Section Name        Object
 
@@ -129,43 +129,43 @@ Memory Map of the image
     0x0000009c   0x000000e0   Code   RO    37   * !!!                 __main_nshl.o(c_a__ue.l)
     0x0000017c   0x00000054   Code   RO     1     .text               QyAppMain.o
     0x000001d0   0x00000078   Code   RO     4     .text               QyAdp.o
-    0x00000248   0x000074a4   Code   RO    11     .text               QinYiAppSrc.o
-    0x000076ec   0x00004740   Code   RO    19     .text               QinYiProtocol.o
-    0x0000be2c   0x00000620   Code   RO    24     .text               QinYiAppAdapt.o
-    0x0000c44c   0x00000580   Code   RO    29     .text               QinYiDecoder.o
-    0x0000c9cc   0x00000214   Code   RO    39     .text               _get_argv.o(c_a__ue.l)
-    0x0000cbe0   0x00000080   Code   RO    43     .text               memcmp.o(c_a__ue.l)
-    0x0000cc60   0x00000044   Code   RO    45     .text               rt_memclr.o(c_a__ue.l)
-    0x0000cca4   0x00000058   Code   RO    47     .text               rt_memclr_w.o(c_a__ue.l)
-    0x0000ccfc   0x000000b4   Code   RO    49     .text               rt_memcpy.o(c_a__ue.l)
-    0x0000cdb0   0x0000006c   Code   RO    51     .text               rt_memcpy_w.o(c_a__ue.l)
-    0x0000ce1c   0x00000040   Code   RO    53     .text               rt_memmove.o(c_a__ue.l)
-    0x0000ce5c   0x00000058   Code   RO    55     .text               rt_memmove_w.o(c_a__ue.l)
-    0x0000ceb4   0x000000d4   Code   RO    57     .text               rt_sdiv.o(c_a__ue.l)
-    0x0000cf88   0x0000000c   Code   RO    65     .text               heapext.o(c_a__ue.l)
-    0x0000cf94   0x00000028   Code   RO    67     .text               kernel.o(c_a__ue.l)
-    0x0000cfbc   0x0000000c   Code   RO    69     .text               rt_div0.o(c_a__ue.l)
-    0x0000cfc8   0x00000018   Code   RO    71     .text               rt_raise.o(c_a__ue.l)
-    0x0000cfe0   0x00000030   Code   RO    73     .text               sys_command.o(c_a__ue.l)
-    0x0000d010   0x00000064   Code   RO    75     .text               __raise.o(c_a__ue.l)
-    0x0000d074   0x00000018   Code   RO    77     .text               exit.o(c_a__ue.l)
-    0x0000d08c   0x000000fc   Code   RO    79     .text               lib_init.o(c_a__ue.l)
-    0x0000d188   0x000000fc   Code   RO    85     .text               stkheap1.o(c_a__ue.l)
-    0x0000d284   0x00000018   Code   RO    89     .text               sys_exit.o(c_a__ue.l)
-    0x0000d29c   0x00000004   Code   RO    91     .text               use_semi.o(c_a__ue.l)
-    0x0000d2a0   0x00000160   Code   RO    95     .text               defsig.o(c_a__ue.l)
-    0x0000d400   0x00000018   Code   RO    98     .text               libspace.o(c_a__ue.l)
-    0x0000d418   0x00000048   Code   RO   104     .text               sys_stackheap.o(c_a__ue.l)
-    0x0000d460   0x00000018   Code   RO   109     .text               sys_wrch.o(c_a__ue.l)
-    0x0000d478   0x00000004   Code   RO   106     x$fpl$fpinit        fpinit.o(f_a.l)
-    0x0000d47c   0x0000000a   Data   RO    13     .constdata          QinYiAppSrc.o
-    0x0000d486   0x00000002   PAD
-    0x0000d488   0x00000060   Data   RO    21     .constdata          QinYiProtocol.o
-    0x0000d4e8   0x00000070   Data   RO    26     .constdata          QinYiAppAdapt.o
-    0x0000d558   0x0000012b   Data   RO    96     .constdata          defsig.o(c_a__ue.l)
-    0x0000d683   0x00000001   PAD
-    0x0000d684   0x00000024   Data   RO   111     Region$$Table       anon$$obj.o
-    0x0000d6a8   0x00000018   Data   RO   112     ZISection$$Table    anon$$obj.o
+    0x00000248   0x000074bc   Code   RO    11     .text               QinYiAppSrc.o
+    0x00007704   0x000046d4   Code   RO    19     .text               QinYiProtocol.o
+    0x0000bdd8   0x00000620   Code   RO    24     .text               QinYiAppAdapt.o
+    0x0000c3f8   0x00000580   Code   RO    29     .text               QinYiDecoder.o
+    0x0000c978   0x00000214   Code   RO    39     .text               _get_argv.o(c_a__ue.l)
+    0x0000cb8c   0x00000080   Code   RO    43     .text               memcmp.o(c_a__ue.l)
+    0x0000cc0c   0x00000044   Code   RO    45     .text               rt_memclr.o(c_a__ue.l)
+    0x0000cc50   0x00000058   Code   RO    47     .text               rt_memclr_w.o(c_a__ue.l)
+    0x0000cca8   0x000000b4   Code   RO    49     .text               rt_memcpy.o(c_a__ue.l)
+    0x0000cd5c   0x0000006c   Code   RO    51     .text               rt_memcpy_w.o(c_a__ue.l)
+    0x0000cdc8   0x00000040   Code   RO    53     .text               rt_memmove.o(c_a__ue.l)
+    0x0000ce08   0x00000058   Code   RO    55     .text               rt_memmove_w.o(c_a__ue.l)
+    0x0000ce60   0x000000d4   Code   RO    57     .text               rt_sdiv.o(c_a__ue.l)
+    0x0000cf34   0x0000000c   Code   RO    65     .text               heapext.o(c_a__ue.l)
+    0x0000cf40   0x00000028   Code   RO    67     .text               kernel.o(c_a__ue.l)
+    0x0000cf68   0x0000000c   Code   RO    69     .text               rt_div0.o(c_a__ue.l)
+    0x0000cf74   0x00000018   Code   RO    71     .text               rt_raise.o(c_a__ue.l)
+    0x0000cf8c   0x00000030   Code   RO    73     .text               sys_command.o(c_a__ue.l)
+    0x0000cfbc   0x00000064   Code   RO    75     .text               __raise.o(c_a__ue.l)
+    0x0000d020   0x00000018   Code   RO    77     .text               exit.o(c_a__ue.l)
+    0x0000d038   0x000000fc   Code   RO    79     .text               lib_init.o(c_a__ue.l)
+    0x0000d134   0x000000fc   Code   RO    85     .text               stkheap1.o(c_a__ue.l)
+    0x0000d230   0x00000018   Code   RO    89     .text               sys_exit.o(c_a__ue.l)
+    0x0000d248   0x00000004   Code   RO    91     .text               use_semi.o(c_a__ue.l)
+    0x0000d24c   0x00000160   Code   RO    95     .text               defsig.o(c_a__ue.l)
+    0x0000d3ac   0x00000018   Code   RO    98     .text               libspace.o(c_a__ue.l)
+    0x0000d3c4   0x00000048   Code   RO   104     .text               sys_stackheap.o(c_a__ue.l)
+    0x0000d40c   0x00000018   Code   RO   109     .text               sys_wrch.o(c_a__ue.l)
+    0x0000d424   0x00000004   Code   RO   106     x$fpl$fpinit        fpinit.o(f_a.l)
+    0x0000d428   0x0000000a   Data   RO    13     .constdata          QinYiAppSrc.o
+    0x0000d432   0x00000002   PAD
+    0x0000d434   0x00000060   Data   RO    21     .constdata          QinYiProtocol.o
+    0x0000d494   0x00000070   Data   RO    26     .constdata          QinYiAppAdapt.o
+    0x0000d504   0x0000012b   Data   RO    96     .constdata          defsig.o(c_a__ue.l)
+    0x0000d62f   0x00000001   PAD
+    0x0000d630   0x00000024   Data   RO   111     Region$$Table       anon$$obj.o
+    0x0000d654   0x00000018   Data   RO   112     ZISection$$Table    anon$$obj.o
 
 
     Execution Region ER_RW (Base: 0x00000000, Size: 0x00000474, Max: 0xffffffff, PI)
@@ -202,37 +202,37 @@ Memory Map of the image
 
     0x00000000   0x00000048   Dbug   RW     3     .debug_frame        QyAppMain.o
     0x00000048   0x00000060   Dbug   RW     6     .debug_frame        QyAdp.o
-    0x000000a8   0x000016c0   Dbug   RW    18     .debug_frame        QinYiAppSrc.o
-    0x00001768   0x00001050   Dbug   RW    23     .debug_frame        QinYiProtocol.o
-    0x000027b8   0x000001d8   Dbug   RW    28     .debug_frame        QinYiAppAdapt.o
-    0x00002990   0x0000014c   Dbug   RW    34     .debug_frame        QinYiDecoder.o
-    0x00002adc   0x00000050   Dbug   RW    36     .debug_frame        start.o
-    0x00002b2c   0x0000003c   Dbug   RW    38     .debug_frame        __main_nshl.o(c_a__ue.l)
-    0x00002b68   0x000000cc   Dbug   RW    40     .debug_frame        _get_argv.o(c_a__ue.l)
-    0x00002c34   0x0000003c   Dbug   RW    44     .debug_frame        memcmp.o(c_a__ue.l)
-    0x00002c70   0x00000044   Dbug   RW    46     .debug_frame        rt_memclr.o(c_a__ue.l)
-    0x00002cb4   0x00000054   Dbug   RW    48     .debug_frame        rt_memclr_w.o(c_a__ue.l)
-    0x00002d08   0x0000003c   Dbug   RW    50     .debug_frame        rt_memcpy.o(c_a__ue.l)
-    0x00002d44   0x00000054   Dbug   RW    52     .debug_frame        rt_memcpy_w.o(c_a__ue.l)
-    0x00002d98   0x00000044   Dbug   RW    54     .debug_frame        rt_memmove.o(c_a__ue.l)
-    0x00002ddc   0x0000004c   Dbug   RW    56     .debug_frame        rt_memmove_w.o(c_a__ue.l)
-    0x00002e28   0x00000044   Dbug   RW    58     .debug_frame        rt_sdiv.o(c_a__ue.l)
-    0x00002e6c   0x0000004c   Dbug   RW    66     .debug_frame        heapext.o(c_a__ue.l)
-    0x00002eb8   0x00000068   Dbug   RW    68     .debug_frame        kernel.o(c_a__ue.l)
-    0x00002f20   0x0000003c   Dbug   RW    70     .debug_frame        rt_div0.o(c_a__ue.l)
-    0x00002f5c   0x00000050   Dbug   RW    72     .debug_frame        rt_raise.o(c_a__ue.l)
-    0x00002fac   0x00000054   Dbug   RW    74     .debug_frame        sys_command.o(c_a__ue.l)
-    0x00003000   0x0000005c   Dbug   RW    76     .debug_frame        __raise.o(c_a__ue.l)
-    0x0000305c   0x0000004c   Dbug   RW    78     .debug_frame        exit.o(c_a__ue.l)
-    0x000030a8   0x0000007c   Dbug   RW    80     .debug_frame        lib_init.o(c_a__ue.l)
-    0x00003124   0x00000080   Dbug   RW    86     .debug_frame        stkheap1.o(c_a__ue.l)
-    0x000031a4   0x00000044   Dbug   RW    90     .debug_frame        sys_exit.o(c_a__ue.l)
-    0x000031e8   0x00000044   Dbug   RW    92     .debug_frame        use_semi.o(c_a__ue.l)
-    0x0000322c   0x0000004c   Dbug   RW    97     .debug_frame        defsig.o(c_a__ue.l)
-    0x00003278   0x00000044   Dbug   RW   100     .debug_frame        libspace.o(c_a__ue.l)
-    0x000032bc   0x0000004c   Dbug   RW   105     .debug_frame        sys_stackheap.o(c_a__ue.l)
-    0x00003308   0x00000044   Dbug   RW   107     .debug_frame        fpinit.o(f_a.l)
-    0x0000334c   0x00000048   Dbug   RW   110     .debug_frame        sys_wrch.o(c_a__ue.l)
+    0x000000a8   0x000016c4   Dbug   RW    18     .debug_frame        QinYiAppSrc.o
+    0x0000176c   0x00001034   Dbug   RW    23     .debug_frame        QinYiProtocol.o
+    0x000027a0   0x000001d8   Dbug   RW    28     .debug_frame        QinYiAppAdapt.o
+    0x00002978   0x0000014c   Dbug   RW    34     .debug_frame        QinYiDecoder.o
+    0x00002ac4   0x00000050   Dbug   RW    36     .debug_frame        start.o
+    0x00002b14   0x0000003c   Dbug   RW    38     .debug_frame        __main_nshl.o(c_a__ue.l)
+    0x00002b50   0x000000cc   Dbug   RW    40     .debug_frame        _get_argv.o(c_a__ue.l)
+    0x00002c1c   0x0000003c   Dbug   RW    44     .debug_frame        memcmp.o(c_a__ue.l)
+    0x00002c58   0x00000044   Dbug   RW    46     .debug_frame        rt_memclr.o(c_a__ue.l)
+    0x00002c9c   0x00000054   Dbug   RW    48     .debug_frame        rt_memclr_w.o(c_a__ue.l)
+    0x00002cf0   0x0000003c   Dbug   RW    50     .debug_frame        rt_memcpy.o(c_a__ue.l)
+    0x00002d2c   0x00000054   Dbug   RW    52     .debug_frame        rt_memcpy_w.o(c_a__ue.l)
+    0x00002d80   0x00000044   Dbug   RW    54     .debug_frame        rt_memmove.o(c_a__ue.l)
+    0x00002dc4   0x0000004c   Dbug   RW    56     .debug_frame        rt_memmove_w.o(c_a__ue.l)
+    0x00002e10   0x00000044   Dbug   RW    58     .debug_frame        rt_sdiv.o(c_a__ue.l)
+    0x00002e54   0x0000004c   Dbug   RW    66     .debug_frame        heapext.o(c_a__ue.l)
+    0x00002ea0   0x00000068   Dbug   RW    68     .debug_frame        kernel.o(c_a__ue.l)
+    0x00002f08   0x0000003c   Dbug   RW    70     .debug_frame        rt_div0.o(c_a__ue.l)
+    0x00002f44   0x00000050   Dbug   RW    72     .debug_frame        rt_raise.o(c_a__ue.l)
+    0x00002f94   0x00000054   Dbug   RW    74     .debug_frame        sys_command.o(c_a__ue.l)
+    0x00002fe8   0x0000005c   Dbug   RW    76     .debug_frame        __raise.o(c_a__ue.l)
+    0x00003044   0x0000004c   Dbug   RW    78     .debug_frame        exit.o(c_a__ue.l)
+    0x00003090   0x0000007c   Dbug   RW    80     .debug_frame        lib_init.o(c_a__ue.l)
+    0x0000310c   0x00000080   Dbug   RW    86     .debug_frame        stkheap1.o(c_a__ue.l)
+    0x0000318c   0x00000044   Dbug   RW    90     .debug_frame        sys_exit.o(c_a__ue.l)
+    0x000031d0   0x00000044   Dbug   RW    92     .debug_frame        use_semi.o(c_a__ue.l)
+    0x00003214   0x0000004c   Dbug   RW    97     .debug_frame        defsig.o(c_a__ue.l)
+    0x00003260   0x00000044   Dbug   RW   100     .debug_frame        libspace.o(c_a__ue.l)
+    0x000032a4   0x0000004c   Dbug   RW   105     .debug_frame        sys_stackheap.o(c_a__ue.l)
+    0x000032f0   0x00000044   Dbug   RW   107     .debug_frame        fpinit.o(f_a.l)
+    0x00003334   0x00000048   Dbug   RW   110     .debug_frame        sys_wrch.o(c_a__ue.l)
 
 
 ================================================================================
@@ -244,15 +244,15 @@ Image component sizes
 
         84          0          0        100         72   QyAppMain.o
       1408          0          0         36        332   QinYiDecoder.o
-     18240         96        572         64       4176   QinYiProtocol.o
+     18132         96        572         64       4148   QinYiProtocol.o
        120          0          0          4         96   QyAdp.o
          0         60          4          0          0   anon$$obj.o
       1568        112        240          1        472   QinYiAppAdapt.o
        156          0          0          0         80   start.o
-     29860         10        324        504       5824   QinYiAppSrc.o
+     29884         10        324        504       5828   QinYiAppSrc.o
 
     ------------------------------------------------------------------------
-     51436        278       1140        709      11052   Object Totals
+     51352        278       1140        709      11028   Object Totals
 
     ------------------------------------------------------------------------
 
@@ -305,13 +305,13 @@ Image component sizes
 
       Code    RO Data    RW Data    ZI Data      Debug   
 
-     54396        577       1140        805      13204   Grand Totals
+     54312        577       1140        805      13180   Grand Totals
 
 ================================================================================
 
-    Total RO  Size(Code + RO Data)                54973 (  53.68kB)
+    Total RO  Size(Code + RO Data)                54889 (  53.60kB)
     Total RW  Size(RW Data + ZI Data)              1945 (   1.90kB)
-    Total ROM Size(Code + RO Data + RW Data)      56113 (  54.80kB)
+    Total ROM Size(Code + RO Data + RW Data)      56029 (  54.72kB)
 
 ================================================================================
 

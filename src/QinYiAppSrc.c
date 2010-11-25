@@ -581,11 +581,9 @@ void QY_LoginCheck(void)
         {
                 g_bQyAuthenticate = QY_AUTHEND;
                 GetDateTime(&g_LastServerAuthenTime);
-                gdi_layer_lock_frame_buffer();   
-                DeleteScreenIfPresent(POPUP_SCREENID);
-                GoBackHistory();
-                gdi_layer_unlock_frame_buffer();    
-                 
+                gdi_layer_lock_frame_buffer();
+                GoBackToHistory(SCR_QINYI_APP_WINDOW_1);
+                gdi_layer_unlock_frame_buffer();
                 QinYiAppEntry();
                 StartQyAsySendThread();
         }
@@ -773,7 +771,7 @@ static void StoreSignRecptData(void)
 	QY_RDID * prdid = (QY_RDID *)g_pSignRecptTask->pRdId;
     SetTaskJunor(g_pSignRecptTask, g_SignRecptName, QY_USER_MAX_LEN);
     mmi_asc_n_to_wcs(g_pSignRecptTask->taskname, (S8*)prdid[0].LaserId, MAX_RDID_LEN+1);////**??**//
-    if( SaveTask(g_pSignRecptTask) >= 0  )
+    if( SaveTask(g_pSignRecptTask, NULL) >= 0  )
     {
         U16 srcid = GetActiveScreenId();
         DisplayPopup((PU8)((U16*)"\xD1\x53\x1\x90\x10\x62\x9F\x52\x0\x0") /*L"发送成功"*/, QY_RES(IMG_GLOBAL_SUCCESS), 1, UI_POPUP_NOTIFYDURATION_TIME, 0);
@@ -856,7 +854,7 @@ void SetSignRecptHighlightIndex(S32 nIndex)
     SetHighlightIndex(nIndex);
     if( nIndex == QY_SEND_MENU)
     {
-        if( g_SignRecptName[0] && g_SignRecptName[1] )
+        if( g_SignRecptName[0] )//&& g_SignRecptName[1] )
         {
             if(g_pSignRecptTask->totals)
             {
@@ -1368,7 +1366,7 @@ void SendProblemTask(void)
     SetTaskJunor(g_pProblemTask, &prob_jounor, 
         offsetof(PROBLEM_JOUNOR,strOther) + (kal_wstrlen(prob_jounor.strOther)*2 + 2));
     mmi_asc_n_to_wcs(g_pProblemTask->taskname, (S8*)prdid[0].LaserId, MAX_RDID_LEN+1);////**??**//    
-    if( SaveTask(g_pProblemTask) >= 0  )
+    if( SaveTask(g_pProblemTask, NULL) >= 0  )
     {
         U16 srcid = GetActiveScreenId();
         DisplayPopup((PU8)((U16*)"\xD1\x53\x1\x90\x10\x62\x9F\x52\x0\x0") /*L"发送成功"*/, 
@@ -1992,7 +1990,7 @@ UINT CalNewBillLen(WSTR * bill_deatil)
     return len*2;
 }
 
-UINT WriteBillJunor(int fsh )
+UINT WriteBillJunor(int fsh , TASK_HEADER * ptask)
 {
     UINT wt;
     UINT len, i, wten = 0;
@@ -2028,7 +2026,7 @@ void SaveBill(BILL_PREP_TBL* bill_tbl,WSTR *bill_deatil)
         kal_wstrncpy(ptask->taskname, ((U16*)"\xE0\x65\xA2\x8B\x55\x53\x36\x65\xF6\x4E\x0\x0") /*L"无订单收件"*/, MAX_RDID_LEN);
     ptask->taskname[MAX_RDID_LEN] = 0;
 
-    ret = SaveTask(ptask) ;
+    ret = SaveTask(ptask, WriteBillJunor) ;
     if( ret == QY_SUCCESS )
     {
         if( g_NewBillType == (QYF_RECIVE | QYF_ACCEPT ) )
@@ -2049,7 +2047,7 @@ void OnBillConfrimSend(int result)
     {
         g_BillPrepTbl->type = g_NewBillType;
         GetDateTime(&g_BillPrepTbl->gentime);        
-        //mmi_wcs_n_to_asc((S8*)g_BillPrepTbl->guid,g_BillPrepInput->ClientId,MAX_CLIENT_ID_LEN*2);
+        mmi_wcs_n_to_asc((S8*)g_BillPrepTbl->guid,g_BillPrepInput->ClientId,MAX_CLIENT_ID_LEN*2);
         g_BillPrepTbl->guid[MAX_GUID_LEN] = 0;
         
         SaveBill(g_BillPrepTbl,g_newBillDetal);        

@@ -304,6 +304,9 @@ typedef struct _NOB_ACK_INFO
     void * pbuf;
 }NOB_ACK;
 
+
+typedef UINT (*FuncWriteJunor)(int, TASK_HEADER * );
+
 extern QY_SETTING_PROF * g_SettingProf;
 
 extern U16 g_QyFolders[][24];
@@ -331,7 +334,7 @@ int  SetTaskJunor(TASK_HEADER * ptask, void * pJunor, int len_junor);
 void * GetTaskJunor(TASK_HEADER * ptask);
 int  AppendRdId(TASK_HEADER * ptask, U16 * pStrRDID);
 int  RemoveRdId(TASK_HEADER * ptask, U16 * pStrRDID);
-int  SaveTask(TASK_HEADER * ptask);
+int  SaveTask(TASK_HEADER * ptask, FuncWriteJunor fwr_junor);
 int  SendTask(TASK_HEADER * ptask, int bpromopt, FuncCmdAck f);
 TASK_HEADER *  LoadTask(int ftype, int index);
 void FreeTask(TASK_HEADER * ptask);
